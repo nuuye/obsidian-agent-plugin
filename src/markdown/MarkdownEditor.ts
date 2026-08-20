@@ -1,5 +1,5 @@
 import { Proposal } from '../types/Proposal.js';
-import { ProposedChange } from '../types/Changes.js';
+import { ProposedChange, TextEdit } from '../types/Changes.js';
 
 export interface ApplyChangesResult {
 	content: string;
@@ -29,30 +29,35 @@ export class MarkdownEditor {
 
 		let workingContent = proposal.originalContent;
 		const skippedChanges: ProposedChange[] = [];
-		const sortedChanges = [...acceptedChanges].sort(
-			(a, b) => b.start - a.start
-		);
+		const applicableEdits: TextEdit[] = [];
 
-		for (const change of sortedChanges) {
-			const hasValidRange =
-				Number.isInteger(change.start) &&
-				Number.isInteger(change.end) &&
-				change.start >= 0 &&
-				change.end >= change.start &&
-				change.end <= proposal.originalContent.length;
-			const currentText = hasValidRange
-				? workingContent.slice(change.start, change.end)
-				: null;
+		for (const change of acceptedChanges) {
+			const edits = change.edits ?? [
+				{
+					start: change.start,
+					end: change.end,
+					before: change.before,
+					after: change.after,
+				},
+			];
+			const isApplicable = edits.every((edit) =>
+				this.isApplicableEdit(proposal.originalContent, edit)
+			);
 
-			if (!hasValidRange || currentText !== change.before) {
+			if (!isApplicable) {
 				skippedChanges.push(change);
 				continue;
 			}
 
+			applicableEdits.push(...edits);
+		}
+
+		applicableEdits.sort((a, b) => b.start - a.start);
+		for (const edit of applicableEdits) {
 			workingContent =
-				workingContent.slice(0, change.start) +
-				change.after +
-				workingContent.slice(change.end);
+				workingContent.slice(0, edit.start) +
+				edit.after +
+				workingContent.slice(edit.end);
 		}
 
 		if (skippedChanges.length > 0) {
@@ -63,5 +68,19 @@ export class MarkdownEditor {
 		}
 
 		return { content: workingContent, skippedChanges };
+	}
+
+	private isApplicableEdit(originalContent: string, edit: TextEdit): boolean {
+		const hasValidRange =
+			Number.isInteger(edit.start) &&
+			Number.isInteger(edit.end) &&
+			edit.start >= 0 &&
+			edit.end >= edit.start &&
+			edit.end <= originalContent.length;
+
+		return (
+			hasValidRange &&
+			originalContent.slice(edit.start, edit.end) === edit.before
+		);
 	}
 }

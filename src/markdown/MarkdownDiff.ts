@@ -1,6 +1,7 @@
 import {
 	ChangeType,
 	ProposedChange,
+	TextEdit,
 } from '../types/Changes.js';
 
 type DiffOperation =
@@ -12,8 +13,14 @@ interface PendingChange {
 	start: number;
 	end: number;
 	modifiedStart: number;
+	modifiedEnd: number;
 	before: string[];
 	after: string[];
+}
+
+interface DraftChange extends TextEdit {
+	modifiedStart: number;
+	modifiedEnd: number;
 }
 
 /**
@@ -38,7 +45,7 @@ export class MarkdownDiff {
 			this.splitLines(original),
 			this.splitLines(modified)
 		);
-		const changes: ProposedChange[] = [];
+		const draftChanges: DraftChange[] = [];
 		let originalOffset = 0;
 		let modifiedOffset = 0;
 		let pending: PendingChange | null = null;
@@ -51,18 +58,11 @@ export class MarkdownDiff {
 			const before = pending.before.join('');
 			const after = pending.after.join('');
 			if (before !== after) {
-				const section =
-					this.findSection(original, pending.start) ??
-					this.findSection(modified, pending.modifiedStart);
-				const type = this.classifyChange(before, after);
-
-				changes.push({
-					id: `change-${changes.length + 1}`,
-					type,
-					description: this.describeChange(type, before, after, section),
-					status: 'pending',
+				draftChanges.push({
 					start: pending.start,
 					end: pending.end,
+					modifiedStart: pending.modifiedStart,
+					modifiedEnd: pending.modifiedEnd,
 					before,
 					after,
 				});
@@ -83,6 +83,7 @@ export class MarkdownDiff {
 				start: originalOffset,
 				end: originalOffset,
 				modifiedStart: modifiedOffset,
+				modifiedEnd: modifiedOffset,
 				before: [],
 				after: [],
 			};
@@ -94,11 +95,169 @@ export class MarkdownDiff {
 			} else {
 				pending.after.push(operation.value);
 				modifiedOffset += operation.value.length;
+				pending.modifiedEnd = modifiedOffset;
 			}
 		}
 
 		flushPending();
-		return changes;
+		return this.buildProposedChanges(original, modified, draftChanges);
+	}
+
+	private buildProposedChanges(
+		original: string,
+		modified: string,
+		drafts: DraftChange[]
+	): ProposedChange[] {
+		const groups = this.groupDependentDrafts(drafts);
+
+		return groups
+			.sort(
+				(a, b) =>
+					Math.min(...a.map((edit) => edit.start)) -
+					Math.min(...b.map((edit) => edit.start))
+			)
+			.map((group, index) => {
+				const deletion = group.find((edit) => edit.before && !edit.after);
+				const insertion = group.find((edit) => !edit.before && edit.after);
+				const before = deletion?.before ?? group.map((edit) => edit.before).join('');
+				const after = insertion?.after ?? group.map((edit) => edit.after).join('');
+				const start = Math.min(...group.map((edit) => edit.start));
+				const end = Math.max(...group.map((edit) => edit.end));
+				const modifiedStart = Math.min(
+					...group.map((edit) => edit.modifiedStart)
+				);
+				const section =
+					this.findSection(original, start) ??
+					this.findSection(modified, modifiedStart);
+				const type = this.classifyChange(before, after);
+
+				return {
+					id: `change-${index + 1}`,
+					type,
+					description: this.describeChange(type, before, after, section),
+					status: 'pending',
+					edits: group.map(({ start, end, before, after }) => ({
+						start,
+						end,
+						before,
+						after,
+					})),
+					start,
+					end,
+					before,
+					after,
+				};
+			});
+	}
+
+	private groupDependentDrafts(drafts: DraftChange[]): DraftChange[][] {
+		const parents = drafts.map((_, index) => index);
+		const findRoot = (index: number): number => {
+			let root = index;
+			while (parents[root] !== root) {
+				root = parents[root] ?? root;
+			}
+
+			let current = index;
+			while (parents[current] !== current) {
+				const next = parents[current] ?? root;
+				parents[current] = root;
+				current = next;
+			}
+			return root;
+		};
+		const union = (left: number, right: number) => {
+			const leftRoot = findRoot(left);
+			const rightRoot = findRoot(right);
+			if (leftRoot !== rightRoot) {
+				parents[rightRoot] = leftRoot;
+			}
+		};
+
+		for (let leftIndex = 0; leftIndex < drafts.length; leftIndex++) {
+			const left = drafts[leftIndex];
+			if (!left) {
+				continue;
+			}
+
+			for (
+				let rightIndex = leftIndex + 1;
+				rightIndex < drafts.length;
+				rightIndex++
+			) {
+				const right = drafts[rightIndex];
+				if (!right) {
+					continue;
+				}
+
+				const forwardScore = this.textSimilarity(
+					left.after,
+					right.before
+				);
+				const backwardScore = this.textSimilarity(
+					right.after,
+					left.before
+				);
+				const isInsertionDeletionPair =
+					(this.isInsertion(left) && this.isDeletion(right)) ||
+					(this.isDeletion(left) && this.isInsertion(right));
+				const isCrossedReplacement =
+					forwardScore >= 0.6 && backwardScore >= 0.6;
+
+				if (
+					isCrossedReplacement ||
+					(isInsertionDeletionPair &&
+						Math.max(forwardScore, backwardScore) >= 0.6)
+				) {
+					union(leftIndex, rightIndex);
+				}
+			}
+		}
+
+		const groupedByRoot = new Map<number, DraftChange[]>();
+		for (let index = 0; index < drafts.length; index++) {
+			const draft = drafts[index];
+			if (!draft) {
+				continue;
+			}
+			const root = findRoot(index);
+			const group = groupedByRoot.get(root) ?? [];
+			group.push(draft);
+			groupedByRoot.set(root, group);
+		}
+
+		return [...groupedByRoot.values()];
+	}
+
+	private isInsertion(change: DraftChange): boolean {
+		return !change.before && Boolean(change.after);
+	}
+
+	private isDeletion(change: DraftChange): boolean {
+		return Boolean(change.before) && !change.after;
+	}
+
+	private textSimilarity(left: string, right: string): number {
+		const tokenize = (value: string): Set<string> =>
+			new Set(
+				this.withoutMarkdownFormatting(value)
+					.toLocaleLowerCase()
+					.match(/[\p{L}\p{N}]+/gu) ?? []
+			);
+		const leftTokens = tokenize(left);
+		const rightTokens = tokenize(right);
+		if (leftTokens.size === 0 || rightTokens.size === 0) {
+			return 0;
+		}
+
+		let commonTokens = 0;
+		for (const token of leftTokens) {
+			if (rightTokens.has(token)) {
+				commonTokens++;
+			}
+		}
+
+		return (2 * commonTokens) / (leftTokens.size + rightTokens.size);
 	}
 
 	private splitLines(content: string): string[] {

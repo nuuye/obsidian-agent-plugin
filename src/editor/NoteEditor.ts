@@ -54,6 +54,29 @@ export class NoteEditor {
         return frontmatter + "\n\n" + content;
     }
 
+	private inferNoteKind(
+		content: string
+	): "memo" | "concept" | "reference" {
+		if (
+			/\b(je dois|à comprendre|a comprendre|pourquoi|comment fonctionne|à vérifier|a verifier)\b/i.test(
+				content
+			)
+		) {
+			return "concept";
+		}
+
+		const codeLength = [...content.matchAll(/```[\s\S]*?```/g)].reduce(
+			(total, match) => total + match[0].length,
+			0
+		);
+		if (codeLength > 0 && codeLength / Math.max(content.length, 1) >= 0.25) {
+			return "memo";
+		}
+
+		const headingCount = (content.match(/^#{1,6}\s+/gm) ?? []).length;
+		return headingCount >= 3 ? "reference" : "concept";
+	}
+
     /**
         Improve a note based on its original content and an analysis of it.
      */
@@ -63,30 +86,41 @@ export class NoteEditor {
         existingNotes: string[],
         onToken?: (chunk: string) => void
     ): Promise<string> {
-		const wordCount = originalContent.trim()
-			? originalContent.trim().split(/\s+/).length
-			: 0;
-		const lineCount = originalContent.split(/\r?\n/).length;
-		const isCompactNote = wordCount <= 120 && lineCount <= 30;
+		const noteKind = analysis.noteKind ?? this.inferNoteKind(originalContent);
+		const isMemo = noteKind === "memo";
 		const detectedGaps = (analysis.missingInformation ?? []).filter(
 			(m) => m.origin === "gap"
 		);
-		const gaps = isCompactNote ? detectedGaps.slice(0, 1) : detectedGaps;
+		const gaps = isMemo ? detectedGaps.slice(0, 1) : detectedGaps.slice(0, 3);
         const doubts = (analysis.missingInformation ?? []).filter((m) => m.origin === "authorDoubt");
-		const compactNoteRules = isCompactNote
+		const adaptationRules = isMemo
 			? `
-			RÈGLE ABSOLUE — NOTE COURTE / MÉMO :
+			RÈGLE ABSOLUE — MÉMO / SNIPPET :
 			- Conserve le format de mémo ou de snippet. Ne transforme pas la note en tutoriel ou en cours.
 			- Ajoute au maximum 40 mots au total, seulement s'ils sont indispensables pour utiliser correctement l'information existante.
 			- N'ajoute aucun nouveau titre ou sous-titre, aucune introduction, aucune conclusion et aucune information générale voisine.
 			- Pour un gap, ajoute au maximum une phrase courte. Si l'explication exige davantage, n'ajoute rien.
 			- Une commande accompagnée d'une phrase suffisante doit rester une commande accompagnée d'une phrase.
 			`
-			: '';
+			: noteKind === "concept"
+				? `
+			RÈGLE ABSOLUE — NOTE CONCEPTUELLE :
+			- Apporte un niveau d'explication intermédiaire : assez pour comprendre les notions présentes, jamais un cours exhaustif.
+			- Explique chaque notion que l'auteur dit explicitement devoir comprendre, en une ou deux phrases courtes par notion.
+			- Ajoute au maximum 120 mots au total et n'introduis aucun concept voisin qui n'est pas nécessaire à la compréhension de la note.
+			- Reprends le format dominant de l'auteur : phrases courtes si la note utilise des phrases courtes, listes seulement si elles rendent plusieurs éléments plus lisibles.
+			- Conserve les explications existantes pertinentes, notamment les définitions et exemples déjà écrits.
+			`
+				: `
+			RÈGLE ABSOLUE — NOTE DE RÉFÉRENCE :
+			- Complète uniquement les lacunes directement liées aux sections existantes.
+			- Préserve la structure, la densité et le format dominants de l'auteur.
+			- Reste synthétique : deux phrases ou trois puces au maximum par information manquante.
+			`;
 
         const commonGoldenRules = `
-            [IMPORTANT] UTILISE DES LISTES À PUCES AU TANT QUE NECESSAIRE. PRIVILIGIE CE FORMAT POUR EXPLIQUER LES CONCEPTS SIMPLES.
-            -> Règle 1 : Si le concept nécessite une explication plus longue ou complexe, utilise des paragraphes structurés avec des sous-titres Markdown (###).
+			[IMPORTANT] RESPECTE LE FORMAT DOMINANT DE L'AUTEUR. N'utilise une liste à puces que si elle rend plusieurs éléments distincts plus lisibles.
+			-> Règle 1 : N'ajoute un sous-titre Markdown que si la note possède déjà une structure comparable et que plusieurs paragraphes le nécessitent réellement.
             -> Règle 1bis : N'utilise pas des mots compliqués. Si le sujet est technique l'expliquation doit être comprise facilement.
             -> Règle 2 : N'utilise JAMAIS du texte en gras comme substitut à un titre Markdown. Si tu structures avec des sous-parties, utilise systématiquement ### (ou ##### selon le niveau de la note), jamais du gras en début de ligne.
             -> Règle 3 : INSÈRE l'enrichissement à l'endroit le plus cohérent avec la structure narrative existante (par exemple après un exemple qui illustre déjà le concept, pas avant). Ne casse jamais un enchaînement logique existant (explication → exemple → conclusion).
@@ -134,7 +168,7 @@ export class NoteEditor {
                 : "";
 
 		const useSchema =
-			!isCompactNote &&
+			!isMemo &&
 			analysis.schema.useful &&
 			analysis.schema.score > 0.6;
         let schemaBlock: string;
@@ -176,7 +210,8 @@ export class NoteEditor {
         ${gapsPrompt}
         ${doubtsPrompt}
         ${gapsPrompt || doubtsPrompt ? commonGoldenRules : ""}
-		${compactNoteRules}
+		${adaptationRules}
+		RÈGLE ABSOLUE D'UNICITÉ : Toute reformulation doit REMPLACER la formulation originale. Ne conserve jamais côte à côte une phrase originale et sa version corrigée, enrichie ou mise en forme. Relis la sortie et supprime toute répétition exacte ou quasi identique.
         6. ${schemaBlock}
         7. NE PLACE JAMAIS ta réponse finale dans un bloc \`\`\`markdown global. Retourne le texte directement.
         
