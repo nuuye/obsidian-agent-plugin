@@ -1,4 +1,4 @@
-import { App, Modal, Setting } from 'obsidian';
+import { App, Modal, Notice, Setting } from 'obsidian';
 import { Proposal } from '../types/Proposal';
 import { ProposedChange } from '../types/Changes';
 import { MarkdownEditor } from '../markdown/MarkdownEditor';
@@ -26,7 +26,7 @@ export class ReviewModal extends Modal {
 		contentEl.createEl('h2', { text: 'Proposed changes' });
 
 		this.proposal.changes.forEach((change: ProposedChange) => {
-			new Setting(contentEl)
+			const setting = new Setting(contentEl)
 				.setName(change.type)
 				.setDesc(change.description)
 				.addToggle((toggle) =>
@@ -38,6 +38,27 @@ export class ReviewModal extends Modal {
 						}
 					})
 				);
+
+			const preview = setting.descEl.createEl('details', {
+				cls: 'note-improver-change-preview',
+			});
+			preview.createEl('summary', { text: 'Show change' });
+			preview.createDiv({
+				cls: 'note-improver-change-label',
+				text: 'Before',
+			});
+			preview.createEl('pre', {
+				cls: 'note-improver-change-before',
+				text: change.before || '(nothing)',
+			});
+			preview.createDiv({
+				cls: 'note-improver-change-label',
+				text: 'After',
+			});
+			preview.createEl('pre', {
+				cls: 'note-improver-change-after',
+				text: change.after || '(nothing)',
+			});
 		});
 
 		const buttonRow = contentEl.createDiv({
@@ -68,11 +89,19 @@ export class ReviewModal extends Modal {
 	}
 
 	private async confirmWith(acceptedChanges: ProposedChange[]) {
-		const finalContent = this.markdownEditor.applyChanges(
+		const { content, skippedChanges } = this.markdownEditor.applyChanges(
 			this.proposal,
 			acceptedChanges
 		);
-		await this.onConfirm(finalContent);
+
+		if (skippedChanges.length > 0) {
+			new Notice(
+				`${skippedChanges.length} change(s) could not be located precisely and were skipped: ` +
+					skippedChanges.map((c) => c.description).join(', ')
+			);
+		}
+
+		await this.onConfirm(content);
 		this.close();
 	}
 

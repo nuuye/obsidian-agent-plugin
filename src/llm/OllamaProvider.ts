@@ -13,15 +13,18 @@ export class OllamaProvider implements LLMProvider {
 	private baseUrl: string;
 	private model: string;
 
-	constructor(
-		model: string = 'qwen3:14b',
-		baseUrl: string = 'http://127.0.0.1:11434'
-	) {
+	constructor(model: string, baseUrl: string = 'http://127.0.0.1:11434') {
 		this.model = model;
 		this.baseUrl = baseUrl;
 	}
 
 	async generate(prompt: string, options?: GenerateOptions): Promise<string> {
+		if (!this.model) {
+			throw new Error(
+				'Ollama model is not configured. Set it in the plugin settings.'
+			);
+		}
+
 		let finalPrompt = prompt;
 
 		if (options?.skipThinking) {
@@ -82,7 +85,7 @@ export class OllamaProvider implements LLMProvider {
 			}
 			return responseText;
 		} catch (error) {
-			console.error('❌ Erreur de connexion à Ollama :', error);
+			console.error('Erreur de connexion à Ollama :', error);
 			throw new Error('Impossible de communiquer avec le LLM local.');
 		}
 	}

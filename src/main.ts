@@ -21,7 +21,7 @@ export default class NoteImproverPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'improve-active-note',
-			name: 'Improve current note with AI',
+			name: 'Improve note with AI',
 			callback: () => {
 				void improveActiveNote(this);
 			},

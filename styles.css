@@ -1,8 +1,32 @@
-/*
+.note-improver-change-preview {
+	margin-top: var(--size-4-2);
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.note-improver-change-preview summary {
+	cursor: pointer;
+	color: var(--text-muted);
+}
 
-If your plugin does not need CSS, delete this file.
+.note-improver-change-label {
+	margin-top: var(--size-4-2);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+}
 
-*/
+.note-improver-change-preview pre {
+	max-height: 12rem;
+	margin: var(--size-4-1) 0 0;
+	padding: var(--size-4-2);
+	overflow: auto;
+	white-space: pre-wrap;
+	word-break: break-word;
+	background: var(--background-secondary);
+}
+
+.note-improver-change-before {
+	border-left: 3px solid var(--text-error);
+}
+
+.note-improver-change-after {
+	border-left: 3px solid var(--text-success);
+}

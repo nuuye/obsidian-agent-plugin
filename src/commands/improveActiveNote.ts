@@ -40,9 +40,8 @@ export async function improveActiveNote(
 			return;
 		}
 
-		// Sélection individuelle des changements gérée par ReviewModal.
-		// L'application vraiment partielle (au-delà de tout/rien) reste un
-		// TODO dans MarkdownEditor, volontairement laissé pour plus tard.
+		// Le diff est calculé localement et ReviewModal permet d'appliquer tout
+		// ou seulement un sous-ensemble des changements proposés.
 		new ReviewModal(plugin.app, proposal, async (finalContent: string) => {
 			await vaultService.backupNote(file, originalContent);
 			await vaultService.writeNote(file, finalContent);
