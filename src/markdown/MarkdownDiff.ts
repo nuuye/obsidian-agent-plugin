@@ -79,6 +79,16 @@ export class MarkdownDiff {
 				continue;
 			}
 
+			const operationIsMermaid = this.isMermaidBlock(operation.value);
+			const pendingIsMermaid = pending
+				? this.isMermaidBlock(
+						pending.before.join('') + pending.after.join('')
+					)
+				: operationIsMermaid;
+			if (pending && operationIsMermaid !== pendingIsMermaid) {
+				flushPending();
+			}
+
 			pending ??= {
 				start: originalOffset,
 				end: originalOffset,
@@ -265,6 +275,10 @@ export class MarkdownDiff {
 			return [];
 		}
 		return content.match(/[^\n]*\n|[^\n]+$/g) ?? [];
+	}
+
+	private isMermaidBlock(content: string): boolean {
+		return /^\s*(?:`{3,}|~{3,})\s*mermaid\b/im.test(content);
 	}
 
 	/**

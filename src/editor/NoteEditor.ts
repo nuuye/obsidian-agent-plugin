@@ -5,6 +5,7 @@ import { linkKnownConcepts } from "../editor/utils/linkKnownConcepts.js";
 import { normalizeMarkdownSpacing } from "../editor/utils/normalizeMarkdownSpacing.js";
 import { normalizeCommandHeadings } from "../editor/utils/normalizeCommandHeadings.js";
 import { preservePrimaryHeading } from "../editor/utils/preservePrimaryHeading.js";
+import { normalizeVisualHierarchy } from "../editor/utils/normalizeVisualHierarchy.js";
 
 export class NoteEditor {
     constructor(private llm: LLMProvider) {}
@@ -238,6 +239,7 @@ export class NoteEditor {
 		Règles à respecter STRICTEMENT :
 		1. Corriger les fautes et le formatage Markdown (y compris les erreurs de locutions et expressions figées, ex: "en quelques sortes" → "en quelque sorte").
 		RÈGLE ABSOLUE DE LANGUE : La langue de sortie est « ${analysis.writingStyle.language} ». Tout texte naturel ajouté ou reformulé — titres, paragraphes, puces, commentaires et libellés Mermaid — doit rester dans cette langue. Ne traduis jamais seulement une partie de la note sous l'influence de la langue de ces instructions. Les commandes, payloads, chemins et identifiants techniques doivent rester inchangés.
+		RÈGLE ABSOLUE DE HIÉRARCHIE VISUELLE : Structure la note pour qu'elle soit facile à parcourir. Un intitulé autonome qui introduit une liste de catégories ou de types doit être un vrai titre Markdown ###, jamais une simple ligne en gras. Dans la liste, garde uniquement le nom de chaque élément en gras et son explication en texte normal. Alterne titres courts, puces, blocs de code et schémas pertinents pour éviter les murs de texte, sans ajouter de décoration inutile.
 		2. Préserver le style de l'auteur : Ton = ${
             analysis.writingStyle.tone
         }. Le texte ajouté doit être INDISCERNABLE de l'original en termes de densité et de format — n'invente pas de titres en gras façon "listicle" si l'auteur n'en utilise pas ailleurs dans la note.
@@ -271,6 +273,7 @@ export class NoteEditor {
 		const withCommandHeadings = isCommandReference
 			? normalizeCommandHeadings(withOriginalHeading)
 			: withOriginalHeading;
-		return normalizeMarkdownSpacing(withCommandHeadings);
+		const withVisualHierarchy = normalizeVisualHierarchy(withCommandHeadings);
+		return normalizeMarkdownSpacing(withVisualHierarchy);
     }
 }
