@@ -26,6 +26,8 @@ export class NoteAnalyzer {
 
 	        L'objet schema sert à identifier l'utilité et la possibilité d'avoir un schema pour cette note.
 
+	        RÈGLE STRICTE POUR "writingStyle.language" : Détecte uniquement la langue dominante du CONTENU DE LA NOTE, sans tenir compte de la langue française de ces instructions. Retourne exactement "fr" ou "en". Une note majoritairement anglaise contenant quelques termes techniques français reste "en", et inversement.
+
 	        RÈGLE POUR "noteKind" :
 	        - "memo" : commande unique, snippet ou rappel opérationnel dont le but est d'être consulté rapidement ;
 	        - "concept" : note qui cherche à comprendre ou expliquer un sujet, même si elle contient encore très peu de texte ;

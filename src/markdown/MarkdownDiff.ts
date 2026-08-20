@@ -42,8 +42,8 @@ export class MarkdownDiff {
 		}
 
 		const operations = this.diffLines(
-			this.splitLines(original),
-			this.splitLines(modified)
+			this.splitMarkdownUnits(original),
+			this.splitMarkdownUnits(modified)
 		);
 		const draftChanges: DraftChange[] = [];
 		let originalOffset = 0;
@@ -265,6 +265,54 @@ export class MarkdownDiff {
 			return [];
 		}
 		return content.match(/[^\n]*\n|[^\n]+$/g) ?? [];
+	}
+
+	/**
+	 * Conserve chaque bloc fenced comme une unité indivisible. Sans cela, les
+	 * lignes ``` identiques d'un bloc existant et d'un nouveau diagramme peuvent
+	 * être associées entre elles, ce qui permettrait à une sélection partielle de
+	 * garder une fermeture tout en supprimant l'ouverture correspondante.
+	 */
+	private splitMarkdownUnits(content: string): string[] {
+		const lines = this.splitLines(content);
+		const units: string[] = [];
+
+		for (let index = 0; index < lines.length; index++) {
+			const line = lines[index] ?? '';
+			const openingMatch = line.match(/^\s*(`{3,}|~{3,})/);
+			const openingMarker = openingMatch?.[1];
+			if (!openingMarker) {
+				units.push(line);
+				continue;
+			}
+
+			let block = line;
+			const markerCharacter = openingMarker[0];
+			const hasInlineClosingMarker = line
+				.slice((openingMatch?.index ?? 0) + openingMarker.length)
+				.includes(openingMarker);
+			if (!markerCharacter || hasInlineClosingMarker) {
+				units.push(block);
+				continue;
+			}
+
+			for (index++; index < lines.length; index++) {
+				const blockLine = lines[index] ?? '';
+				block += blockLine;
+				const closingMatch = blockLine.match(/^\s*(`{3,}|~{3,})\s*$/);
+				const closingMarker = closingMatch?.[1];
+				if (
+					closingMarker?.[0] === markerCharacter &&
+					closingMarker.length >= openingMarker.length
+				) {
+					break;
+				}
+			}
+
+			units.push(block);
+		}
+
+		return units;
 	}
 
 	private diffLines(original: string[], modified: string[]): DiffOperation[] {

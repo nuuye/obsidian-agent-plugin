@@ -235,9 +235,10 @@ export class NoteEditor {
 
         const prompt = `Tu dois proposer une version améliorée de cette note Obsidian.
         
-        Règles à respecter STRICTEMENT :
-        1. Corriger les fautes et le formatage Markdown (y compris les erreurs de locutions et expressions figées, ex: "en quelques sortes" → "en quelque sorte").
-        2. Préserver le style de l'auteur : Ton = ${
+		Règles à respecter STRICTEMENT :
+		1. Corriger les fautes et le formatage Markdown (y compris les erreurs de locutions et expressions figées, ex: "en quelques sortes" → "en quelque sorte").
+		RÈGLE ABSOLUE DE LANGUE : La langue de sortie est « ${analysis.writingStyle.language} ». Tout texte naturel ajouté ou reformulé — titres, paragraphes, puces, commentaires et libellés Mermaid — doit rester dans cette langue. Ne traduis jamais seulement une partie de la note sous l'influence de la langue de ces instructions. Les commandes, payloads, chemins et identifiants techniques doivent rester inchangés.
+		2. Préserver le style de l'auteur : Ton = ${
             analysis.writingStyle.tone
         }. Le texte ajouté doit être INDISCERNABLE de l'original en termes de densité et de format — n'invente pas de titres en gras façon "listicle" si l'auteur n'en utilise pas ailleurs dans la note.
         3. Mets en gras les concepts clés de la note ou les mots qui sont importants pour comprendre un concept rapidement.
