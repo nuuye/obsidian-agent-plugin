@@ -3,6 +3,7 @@ import { Analysis } from "../types/Analysis.js";
 import { mermaidSyntaxExamples } from "../constants.js";
 import { linkKnownConcepts } from "../editor/utils/linkKnownConcepts.js";
 import { normalizeMarkdownSpacing } from "../editor/utils/normalizeMarkdownSpacing.js";
+import { normalizeCommandHeadings } from "../editor/utils/normalizeCommandHeadings.js";
 import { preservePrimaryHeading } from "../editor/utils/preservePrimaryHeading.js";
 
 export class NoteEditor {
@@ -79,6 +80,18 @@ export class NoteEditor {
 		return headingCount >= 3 ? "reference" : "concept";
 	}
 
+	private isCommandReference(content: string): boolean {
+		const underlinedLabels = (content.match(/<u>[^\n]+<\/u>/gi) ?? [])
+			.length;
+		const inlineCommands = (content.match(/`[^`\n]+`/g) ?? []).length;
+		const fencedBlocks = (content.match(/^```/gm) ?? []).length / 2;
+
+		return (
+			underlinedLabels >= 4 &&
+			(inlineCommands >= 3 || fencedBlocks >= 2)
+		);
+	}
+
     /**
         Improve a note based on its original content and an analysis of it.
      */
@@ -90,6 +103,7 @@ export class NoteEditor {
     ): Promise<string> {
 		const noteKind = analysis.noteKind ?? this.inferNoteKind(originalContent);
 		const isMemo = noteKind === "memo";
+		const isCommandReference = this.isCommandReference(originalContent);
 		const detectedGaps = (analysis.missingInformation ?? []).filter(
 			(m) => m.origin === "gap"
 		);
@@ -119,8 +133,17 @@ export class NoteEditor {
 			RÈGLE ABSOLUE — NOTE DE RÉFÉRENCE :
 			- Complète uniquement les lacunes directement liées aux sections existantes.
 			- Préserve la structure, la densité et le format dominants de l'auteur.
-			- Reste synthétique : deux phrases ou trois puces au maximum par information manquante.
+				- Reste synthétique : deux phrases ou trois puces au maximum par information manquante.
 			`;
+		const commandReferenceRules = isCommandReference
+			? `
+			RÈGLE ABSOLUE — CATALOGUE DE COMMANDES :
+			- Transforme chaque descriptif placé juste avant une commande en sous-section H5 au format « ##### Description ».
+			- N'utilise plus de balises HTML <u> pour ces descriptifs et retire le deux-points final du titre.
+			- Place ensuite la commande dans un bloc de code, puis garde les précisions courtes sous ce bloc.
+			- N'utilise pas un niveau de titre plus grand : cette hiérarchie doit rester discrète et facile à parcourir.
+			`
+			: '';
 
         const commonGoldenRules = `
 			[IMPORTANT] RESPECTE LE FORMAT DOMINANT DE L'AUTEUR. N'utilise une liste à puces que si elle rend plusieurs éléments distincts plus lisibles.
@@ -224,6 +247,7 @@ export class NoteEditor {
         ${doubtsPrompt}
         ${gapsPrompt || doubtsPrompt ? commonGoldenRules : ""}
 		${adaptationRules}
+		${commandReferenceRules}
 		RÈGLE ABSOLUE D'UNICITÉ : Toute reformulation doit REMPLACER la formulation originale. Ne conserve jamais côte à côte une phrase originale et sa version corrigée, enrichie ou mise en forme. Relis la sortie et supprime toute répétition exacte ou quasi identique.
         6. ${schemaBlock}
         7. NE PLACE JAMAIS ta réponse finale dans un bloc \`\`\`markdown global. Retourne le texte directement.
@@ -243,6 +267,9 @@ export class NoteEditor {
 			originalContent,
 			withLinks
 		);
-		return normalizeMarkdownSpacing(withOriginalHeading);
+		const withCommandHeadings = isCommandReference
+			? normalizeCommandHeadings(withOriginalHeading)
+			: withOriginalHeading;
+		return normalizeMarkdownSpacing(withCommandHeadings);
     }
 }

@@ -27,9 +27,9 @@ export class NoteAnalyzer {
 	        L'objet schema sert à identifier l'utilité et la possibilité d'avoir un schema pour cette note.
 
 	        RÈGLE POUR "noteKind" :
-	        - "memo" : commande, snippet ou rappel opérationnel dont le but est d'être consulté rapidement ;
+	        - "memo" : commande unique, snippet ou rappel opérationnel dont le but est d'être consulté rapidement ;
 	        - "concept" : note qui cherche à comprendre ou expliquer un sujet, même si elle contient encore très peu de texte ;
-	        - "reference" : fiche structurée qui rassemble plusieurs informations factuelles sur un sujet.
+	        - "reference" : fiche structurée qui rassemble plusieurs informations factuelles sur un sujet, notamment un catalogue contenant de nombreuses commandes.
 	        La longueur seule ne détermine JAMAIS le type. Une note courte qui explique plusieurs notions ou exprime des choses à comprendre est une note "concept", pas un "memo".
 
         RÈGLE STRICTE POUR LE SCHÉMA :

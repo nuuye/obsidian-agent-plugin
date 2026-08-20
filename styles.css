@@ -55,3 +55,21 @@
 		animation-duration: 1.8s;
 	}
 }
+
+/* Réduit uniquement l'espace vertical des blocs de code des notes Markdown. */
+.workspace-leaf-content[data-type='markdown'] .markdown-rendered pre:not(.mermaid) {
+	padding-top: var(--size-4-1);
+	padding-bottom: var(--size-4-1);
+}
+
+.workspace-leaf-content[data-type='markdown']
+	.markdown-source-view.mod-cm6
+	.cm-line.HyperMD-codeblock-begin {
+	padding-top: var(--size-4-1);
+}
+
+.workspace-leaf-content[data-type='markdown']
+	.markdown-source-view.mod-cm6
+	.cm-line.HyperMD-codeblock-end {
+	padding-bottom: var(--size-4-1);
+}
