@@ -75,7 +75,7 @@ export class ReviewModal extends Modal {
 		};
 
 		const applySelectionBtn = buttonRow.createEl('button', {
-			text: 'Apply selection',
+			text: 'Accept selection',
 		});
 		applySelectionBtn.onclick = () => {
 			const selected = this.proposal.changes.filter((c) =>

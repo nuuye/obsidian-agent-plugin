@@ -30,3 +30,28 @@
 .note-improver-change-after {
 	border-left: 3px solid var(--text-success);
 }
+
+.note-improver-button-row {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: var(--size-4-2);
+	margin-top: var(--size-4-4);
+}
+
+.note-improver-ribbon-loading svg {
+	animation: note-improver-spin 0.9s linear infinite;
+	transform-origin: center;
+}
+
+@keyframes note-improver-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.note-improver-ribbon-loading svg {
+		animation-duration: 1.8s;
+	}
+}
