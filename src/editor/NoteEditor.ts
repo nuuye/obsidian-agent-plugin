@@ -106,9 +106,11 @@ export class NoteEditor {
 				? `
 			RÈGLE ABSOLUE — NOTE CONCEPTUELLE :
 			- Apporte un niveau d'explication intermédiaire : assez pour comprendre les notions présentes, jamais un cours exhaustif.
-			- Explique chaque notion que l'auteur dit explicitement devoir comprendre, en une ou deux phrases courtes par notion.
-			- Ajoute au maximum 120 mots au total et n'introduis aucun concept voisin qui n'est pas nécessaire à la compréhension de la note.
-			- Reprends le format dominant de l'auteur : phrases courtes si la note utilise des phrases courtes, listes seulement si elles rendent plusieurs éléments plus lisibles.
+			- Donne à chaque concept important sa propre section courte, avec un titre Markdown placé un niveau sous le titre principal (généralement ## sous un titre #).
+			- Pour chaque notion que l'auteur dit explicitement devoir comprendre, écris une définition très courte puis 2 à 4 puces apportant chacune une information distincte et utile.
+			- Ne place JAMAIS deux concepts indépendants, comme les volumes et les réseaux, dans le même long paragraphe.
+			- Aucun paragraphe ne doit dépasser deux phrases. Privilégie les puces pour les propriétés, types, usages ou différences.
+			- Ajoute au maximum 160 mots au total et n'introduis aucun concept voisin qui n'est pas nécessaire à la compréhension de la note.
 			- Conserve les explications existantes pertinentes, notamment les définitions et exemples déjà écrits.
 			`
 				: `
@@ -124,7 +126,7 @@ export class NoteEditor {
             -> Règle 1bis : N'utilise pas des mots compliqués. Si le sujet est technique l'expliquation doit être comprise facilement.
             -> Règle 2 : N'utilise JAMAIS du texte en gras comme substitut à un titre Markdown. Si tu structures avec des sous-parties, utilise systématiquement ### (ou ##### selon le niveau de la note), jamais du gras en début de ligne.
             -> Règle 3 : INSÈRE l'enrichissement à l'endroit le plus cohérent avec la structure narrative existante (par exemple après un exemple qui illustre déjà le concept, pas avant). Ne casse jamais un enchaînement logique existant (explication → exemple → conclusion).
-            -> Règle 4 : Si l'information est déjà présente ailleurs dans la note (tableau, phrase existante), NE LA RÉPÈTE PAS. Reste aussi concis que possible : privilégie une phrase dense plutôt qu'une liste si le concept est simple.
+			-> Règle 4 : Si l'information est déjà présente ailleurs dans la note (tableau, phrase existante), NE LA RÉPÈTE PAS. Pour une seule idée, utilise une phrase courte. Pour plusieurs propriétés, usages ou types, utilise des puces distinctes au lieu de densifier un paragraphe. Ne fusionne jamais plusieurs concepts pour gagner de la place.
 			-> Règle 5 : COHÉRENCE FACTUELLE ET DOMAINE. Avant d'ajouter un exemple ou un chiffre, vérifie qu'il ne contredit AUCUNE donnée déjà présente dans la note (tableaux inclus). N'utilise QUE des exemples appartenant au domaine déjà couvert par la note.
             -> Règle 6 : Chaque point d'une liste doit apporter une information distincte des autres — ne réutilise jamais la même formulation pour deux entrées différentes.
             -> Règle 7 : COHÉRENCE INTERNE DES INTERPRÉTATIONS. Si tu interprètes un symbole ou une convention (ex: le "<" d'un tableau) dans un exemple, applique EXACTEMENT LA MÊME interprétation à tous les exemples suivants du même symbole dans le même paragraphe. Ne dis jamais "moins de X" pour un cas puis "plus de X" pour un autre cas du même symbole — vérifie la cohérence logique entre tes propres phrases avant de les inclure.
@@ -140,8 +142,21 @@ export class NoteEditor {
             `
                 : "";
 
-        const doubtsPrompt =
-            doubts.length > 0
+		const doubtFormattingRules = isMemo
+			? `
+			-> Remplace directement l'extrait de doute par une phrase courte et assurée. N'ajoute ni section ni liste séparée dans un mémo.
+			`
+			: noteKind === "concept"
+				? `
+			-> Supprime la phrase de doute et crée une section Markdown distincte pour CHAQUE concept listé ci-dessus.
+			-> Sous chaque section, donne une définition courte puis 2 à 4 puces synthétiques. Ne fusionne jamais deux concepts dans une même section ou un même paragraphe.
+			`
+				: `
+			-> Remplace la phrase de doute et intègre chaque clarification dans sa section existante. Si aucune section ne correspond, crée une section courte par concept.
+			`;
+
+		const doubtsPrompt =
+			doubts.length > 0
                 ? `${
                       gaps.length > 0 ? "5bis" : "5"
                   }. CLARIFICATION (doutes de l'auteur) : L'auteur exprime un doute ou une incertitude sur les points suivants :
@@ -154,15 +169,9 @@ export class NoteEditor {
                 )
                 .join("\n            ")}
 
-            -> FORMAT DE SORTIE OBLIGATOIRE POUR CHAQUE DOUTE : une reformulation qui REMPLACE directement l'extrait cité, intégrée dans le paragraphe existant. JAMAIS une nouvelle section, un nouveau titre, ou une liste à puces séparée. Le doute doit disparaître DANS le texte, pas être suivi d'un bloc d'explication à côté.
-            
-            -> Exemple de transformation attendue :
-                AVANT (extrait de note) : "Mais alors les Implications ?\\nPerte de précision pour des longs prompts ou des longs calculs."
-                APRÈS (attendu)         : "Cela implique une perte de précision pour les prompts longs ou les calculs complexes, un effet plus marqué sur les quantifications élevées comme Q4 ou Q5."
-                (Remarque : pas de titre, pas de gras, pas de liste — une reformulation fondue dans le texte existant.)
-
-            -> Règle d'or A : NE TE CONTENTE PAS D'AJOUTER une explication à côté de l'extrait. REFORMULE DIRECTEMENT la phrase concernée pour intégrer la clarification, en gardant l'extrait original comme point d'ancrage (même idée, formulation plus assurée et précise).
-            -> Règle d'or B : Supprime la tournure de doute elle-même (ex: "en quelque sorte", "je crois", "dans une certaine mesure") une fois la clarification intégrée — l'auteur n'a plus besoin d'exprimer d'incertitude sur un point désormais expliqué.
+			${doubtFormattingRules}
+			-> Règle d'or A : La phrase de doute originale doit disparaître une fois les clarifications intégrées. Ne la conserve pas en plus des nouvelles explications.
+			-> Règle d'or B : Supprime la tournure de doute elle-même (ex: "en quelque sorte", "je crois", "dans une certaine mesure") une fois la clarification intégrée — l'auteur n'a plus besoin d'exprimer d'incertitude sur un point désormais expliqué.
             -> Règle d'or C : Ne transforme pas une prudence académique légitime (ex: "généralement", "dans la plupart des cas") en affirmation absolue. Le but est de clarifier le concept, pas de supprimer toute nuance justifiée.
             `
                 : "";
@@ -192,8 +201,9 @@ export class NoteEditor {
 
                     - RÈGLE POUR CE TYPE : ${schemaConfig.rule}
                     - N'invente AUCUNE relation causale ou séquentielle entre des concepts qui sont en réalité indépendants. Si les concepts sont des dimensions parallèles (pas un flux), utilise un format adapté.
-                    - Le Schéma doit commencer par \`\`\`mermaid et se terminer par \`\`\`.
-                    - REGLE FINALE ET ABSOLUE : Le Schema doit être CONSCIT et faire un résumé du sujet.`;
+					- Le Schéma doit commencer par \`\`\`mermaid et se terminer par \`\`\`.
+					- Tous les libellés de nœuds et de relations doivent être dans la même langue que la note.
+					- REGLE FINALE ET ABSOLUE : Le Schema doit être CONSCIT et faire un résumé du sujet.`;
         } else {
             schemaBlock = "Ne PAS ajouter de schéma.";
         }
@@ -206,7 +216,8 @@ export class NoteEditor {
             analysis.writingStyle.tone
         }. Le texte ajouté doit être INDISCERNABLE de l'original en termes de densité et de format — n'invente pas de titres en gras façon "listicle" si l'auteur n'en utilise pas ailleurs dans la note.
         3. Mets en gras les concepts clés de la note ou les mots qui sont importants pour comprendre un concept rapidement.
-        4. Ne supprimer aucune information existante pertinente. (Tu es autorisé à supprimer ou reformuler les phrases obsolètes ou exprimant un doute selon les règles d'enrichissement/clarification si elles s'appliquent).
+		4. Ne supprimer aucune information existante pertinente. (Tu es autorisé à supprimer ou reformuler les phrases obsolètes ou exprimant un doute selon les règles d'enrichissement/clarification si elles s'appliquent).
+		RÈGLE ABSOLUE DE STRUCTURE : Conserve le titre principal (# ...) et tous les titres existants pertinents. Ne retire jamais une définition ou un exemple existant pour raccourcir la note.
         ${gapsPrompt}
         ${doubtsPrompt}
         ${gapsPrompt || doubtsPrompt ? commonGoldenRules : ""}
