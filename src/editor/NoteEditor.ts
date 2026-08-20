@@ -2,6 +2,7 @@ import { LLMProvider } from "../llm/types/LLMProvider.js";
 import { Analysis } from "../types/Analysis.js";
 import { mermaidSyntaxExamples } from "../constants.js";
 import { linkKnownConcepts } from "../editor/utils/linkKnownConcepts.js";
+import { normalizeMarkdownSpacing } from "../editor/utils/normalizeMarkdownSpacing.js";
 
 export class NoteEditor {
     constructor(private llm: LLMProvider) {}
@@ -51,7 +52,7 @@ export class NoteEditor {
 
         const frontmatter = ["---", "aliases:", aliasLines, "---"].join("\n");
 
-        return frontmatter + "\n\n" + content;
+		return frontmatter + "\n" + content;
     }
 
 	private inferNoteKind(
@@ -234,8 +235,9 @@ export class NoteEditor {
         """`;
 
         const modifiedContent = await this.llm.generate(prompt, { onToken });
-        const cleaned = this.cleanLLMOutput(modifiedContent);
-        const withAliases = this.addAliases(cleaned, analysis.topics);
-        return linkKnownConcepts(withAliases, existingNotes);
+		const cleaned = this.cleanLLMOutput(modifiedContent);
+		const withAliases = this.addAliases(cleaned, analysis.topics);
+		const withLinks = linkKnownConcepts(withAliases, existingNotes);
+		return normalizeMarkdownSpacing(withLinks);
     }
 }
