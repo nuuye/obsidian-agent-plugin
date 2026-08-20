@@ -3,6 +3,7 @@ import { Analysis } from "../types/Analysis.js";
 import { mermaidSyntaxExamples } from "../constants.js";
 import { linkKnownConcepts } from "../editor/utils/linkKnownConcepts.js";
 import { normalizeMarkdownSpacing } from "../editor/utils/normalizeMarkdownSpacing.js";
+import { preservePrimaryHeading } from "../editor/utils/preservePrimaryHeading.js";
 
 export class NoteEditor {
     constructor(private llm: LLMProvider) {}
@@ -218,7 +219,7 @@ export class NoteEditor {
         }. Le texte ajouté doit être INDISCERNABLE de l'original en termes de densité et de format — n'invente pas de titres en gras façon "listicle" si l'auteur n'en utilise pas ailleurs dans la note.
         3. Mets en gras les concepts clés de la note ou les mots qui sont importants pour comprendre un concept rapidement.
 		4. Ne supprimer aucune information existante pertinente. (Tu es autorisé à supprimer ou reformuler les phrases obsolètes ou exprimant un doute selon les règles d'enrichissement/clarification si elles s'appliquent).
-		RÈGLE ABSOLUE DE STRUCTURE : Conserve le titre principal (# ...) et tous les titres existants pertinents. Ne retire jamais une définition ou un exemple existant pour raccourcir la note.
+		RÈGLE ABSOLUE DE STRUCTURE : Recopie le titre principal (# ...) caractère pour caractère. Ne le renomme pas, ne le transforme pas en lien et ne lui ajoute aucun suffixe comme « aperçu », « guide » ou « résumé ». Conserve aussi tous les autres titres existants pertinents. Ne retire jamais une définition ou un exemple existant pour raccourcir la note.
         ${gapsPrompt}
         ${doubtsPrompt}
         ${gapsPrompt || doubtsPrompt ? commonGoldenRules : ""}
@@ -238,6 +239,10 @@ export class NoteEditor {
 		const cleaned = this.cleanLLMOutput(modifiedContent);
 		const withAliases = this.addAliases(cleaned, analysis.topics);
 		const withLinks = linkKnownConcepts(withAliases, existingNotes);
-		return normalizeMarkdownSpacing(withLinks);
+		const withOriginalHeading = preservePrimaryHeading(
+			originalContent,
+			withLinks
+		);
+		return normalizeMarkdownSpacing(withOriginalHeading);
     }
 }
