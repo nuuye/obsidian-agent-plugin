@@ -8,6 +8,8 @@ export class ReviewModal extends Modal {
 	private onConfirm: (finalContent: string) => Promise<void>;
 	private selectedIds: Set<string>;
 	private markdownEditor = new MarkdownEditor();
+	private isConfirming = false;
+	private actionButtons: HTMLButtonElement[] = [];
 
 	constructor(
 		app: App,
@@ -86,23 +88,52 @@ export class ReviewModal extends Modal {
 			text: 'Reject all',
 		});
 		rejectAllBtn.onclick = () => this.close();
+
+		this.actionButtons = [
+			acceptAllBtn,
+			applySelectionBtn,
+			rejectAllBtn,
+		];
 	}
 
 	private async confirmWith(acceptedChanges: ProposedChange[]) {
-		const { content, skippedChanges } = this.markdownEditor.applyChanges(
-			this.proposal,
-			acceptedChanges
-		);
-
-		if (skippedChanges.length > 0) {
-			new Notice(
-				`${skippedChanges.length} change(s) could not be located precisely and were skipped: ` +
-					skippedChanges.map((c) => c.description).join(', ')
-			);
+		if (this.isConfirming) {
+			return;
 		}
 
-		await this.onConfirm(content);
-		this.close();
+		this.isConfirming = true;
+		this.actionButtons.forEach((button) => {
+			button.disabled = true;
+		});
+
+		try {
+			const { content, skippedChanges } = this.markdownEditor.applyChanges(
+				this.proposal,
+				acceptedChanges
+			);
+
+			if (skippedChanges.length > 0) {
+				new Notice(
+					`${skippedChanges.length} change(s) could not be located precisely and were skipped: ` +
+						skippedChanges.map((c) => c.description).join(', ')
+				);
+			}
+
+			await this.onConfirm(content);
+			this.close();
+		} catch (error) {
+			console.error('[ERROR] Unable to apply the selected changes:', error);
+			new Notice(
+				`Unable to update the note: ${
+					error instanceof Error ? error.message : String(error)
+				}`
+			);
+		} finally {
+			this.isConfirming = false;
+			this.actionButtons.forEach((button) => {
+				button.disabled = false;
+			});
+		}
 	}
 
 	onClose() {

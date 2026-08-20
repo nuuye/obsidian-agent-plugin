@@ -70,18 +70,33 @@ export class VaultService {
 
 		const now = new Date();
 		const pad = (n: number) => String(n).padStart(2, '0');
+		const padMilliseconds = (n: number) => String(n).padStart(3, '0');
 		const timestamp = `${now.getFullYear()}-${pad(
 			now.getMonth() + 1
-		)}-${pad(now.getDate())}}`;
+		)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(
+			now.getMinutes()
+		)}-${pad(now.getSeconds())}-${padMilliseconds(now.getMilliseconds())}`;
 
 		return `${flattenedPath}-${timestamp}.md`;
 	}
 
+	private buildUniqueBackupPath(file: TFile): string {
+		const fileName = this.buildBackupFileName(file);
+		const stem = fileName.replace(/\.md$/i, '');
+		let candidate = `${VaultService.BACKUP_FOLDER}/${fileName}`;
+		let suffix = 2;
+
+		while (this.app.vault.getAbstractFileByPath(candidate)) {
+			candidate = `${VaultService.BACKUP_FOLDER}/${stem}-${suffix}.md`;
+			suffix++;
+		}
+
+		return candidate;
+	}
+
 	async backupNote(file: TFile, originalContent: string): Promise<void> {
 		await this.ensureBackupFolderExists();
-		const backupPath = `${
-			VaultService.BACKUP_FOLDER
-		}/${this.buildBackupFileName(file)}`;
+		const backupPath = this.buildUniqueBackupPath(file);
 		await this.app.vault.create(backupPath, originalContent);
 	}
 }

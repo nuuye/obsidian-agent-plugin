@@ -63,8 +63,26 @@ export class NoteEditor {
         existingNotes: string[],
         onToken?: (chunk: string) => void
     ): Promise<string> {
-        const gaps = (analysis.missingInformation ?? []).filter((m) => m.origin === "gap");
+		const wordCount = originalContent.trim()
+			? originalContent.trim().split(/\s+/).length
+			: 0;
+		const lineCount = originalContent.split(/\r?\n/).length;
+		const isCompactNote = wordCount <= 120 && lineCount <= 30;
+		const detectedGaps = (analysis.missingInformation ?? []).filter(
+			(m) => m.origin === "gap"
+		);
+		const gaps = isCompactNote ? detectedGaps.slice(0, 1) : detectedGaps;
         const doubts = (analysis.missingInformation ?? []).filter((m) => m.origin === "authorDoubt");
+		const compactNoteRules = isCompactNote
+			? `
+			RÈGLE ABSOLUE — NOTE COURTE / MÉMO :
+			- Conserve le format de mémo ou de snippet. Ne transforme pas la note en tutoriel ou en cours.
+			- Ajoute au maximum 40 mots au total, seulement s'ils sont indispensables pour utiliser correctement l'information existante.
+			- N'ajoute aucun nouveau titre ou sous-titre, aucune introduction, aucune conclusion et aucune information générale voisine.
+			- Pour un gap, ajoute au maximum une phrase courte. Si l'explication exige davantage, n'ajoute rien.
+			- Une commande accompagnée d'une phrase suffisante doit rester une commande accompagnée d'une phrase.
+			`
+			: '';
 
         const commonGoldenRules = `
             [IMPORTANT] UTILISE DES LISTES À PUCES AU TANT QUE NECESSAIRE. PRIVILIGIE CE FORMAT POUR EXPLIQUER LES CONCEPTS SIMPLES.
@@ -73,7 +91,7 @@ export class NoteEditor {
             -> Règle 2 : N'utilise JAMAIS du texte en gras comme substitut à un titre Markdown. Si tu structures avec des sous-parties, utilise systématiquement ### (ou ##### selon le niveau de la note), jamais du gras en début de ligne.
             -> Règle 3 : INSÈRE l'enrichissement à l'endroit le plus cohérent avec la structure narrative existante (par exemple après un exemple qui illustre déjà le concept, pas avant). Ne casse jamais un enchaînement logique existant (explication → exemple → conclusion).
             -> Règle 4 : Si l'information est déjà présente ailleurs dans la note (tableau, phrase existante), NE LA RÉPÈTE PAS. Reste aussi concis que possible : privilégie une phrase dense plutôt qu'une liste si le concept est simple.
-            -> Règle 5 : COHÉRENCE FACTUELLE ET DOMAINE. Avant d'ajouter un exemple ou un chiffre, vérifie qu'il ne contredit AUCUNE donnée déjà présente dans la note (tableaux inclus). N'utilise QUE des exemples appartenant au domaine déjà couvert par la note (ici : inférence de LLM local, assistants conversationnels, génération de texte/code). 
+			-> Règle 5 : COHÉRENCE FACTUELLE ET DOMAINE. Avant d'ajouter un exemple ou un chiffre, vérifie qu'il ne contredit AUCUNE donnée déjà présente dans la note (tableaux inclus). N'utilise QUE des exemples appartenant au domaine déjà couvert par la note.
             -> Règle 6 : Chaque point d'une liste doit apporter une information distincte des autres — ne réutilise jamais la même formulation pour deux entrées différentes.
             -> Règle 7 : COHÉRENCE INTERNE DES INTERPRÉTATIONS. Si tu interprètes un symbole ou une convention (ex: le "<" d'un tableau) dans un exemple, applique EXACTEMENT LA MÊME interprétation à tous les exemples suivants du même symbole dans le même paragraphe. Ne dis jamais "moins de X" pour un cas puis "plus de X" pour un autre cas du même symbole — vérifie la cohérence logique entre tes propres phrases avant de les inclure.
             `;
@@ -115,7 +133,10 @@ export class NoteEditor {
             `
                 : "";
 
-        const useSchema = analysis.schema.useful && analysis.schema.score > 0.6;
+		const useSchema =
+			!isCompactNote &&
+			analysis.schema.useful &&
+			analysis.schema.score > 0.6;
         let schemaBlock: string;
 
         if (useSchema) {
@@ -155,6 +176,7 @@ export class NoteEditor {
         ${gapsPrompt}
         ${doubtsPrompt}
         ${gapsPrompt || doubtsPrompt ? commonGoldenRules : ""}
+		${compactNoteRules}
         6. ${schemaBlock}
         7. NE PLACE JAMAIS ta réponse finale dans un bloc \`\`\`markdown global. Retourne le texte directement.
         
