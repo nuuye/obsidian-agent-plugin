@@ -58,29 +58,6 @@ export class NoteEditor {
 		return frontmatter + "\n" + content;
     }
 
-	private inferNoteKind(
-		content: string
-	): "memo" | "concept" | "reference" {
-		if (
-			/\b(je dois|à comprendre|a comprendre|pourquoi|comment fonctionne|à vérifier|a verifier)\b/i.test(
-				content
-			)
-		) {
-			return "concept";
-		}
-
-		const codeLength = [...content.matchAll(/```[\s\S]*?```/g)].reduce(
-			(total, match) => total + match[0].length,
-			0
-		);
-		if (codeLength > 0 && codeLength / Math.max(content.length, 1) >= 0.25) {
-			return "memo";
-		}
-
-		const headingCount = (content.match(/^#{1,6}\s+/gm) ?? []).length;
-		return headingCount >= 3 ? "reference" : "concept";
-	}
-
 	private isCommandReference(content: string): boolean {
 		const underlinedLabels = (content.match(/<u>[^\n]+<\/u>/gi) ?? [])
 			.length;
@@ -102,7 +79,7 @@ export class NoteEditor {
         existingNotes: string[],
         onToken?: (chunk: string) => void
     ): Promise<string> {
-		const noteKind = analysis.noteKind ?? this.inferNoteKind(originalContent);
+		const noteKind = analysis.noteKind;
 		const isMemo = noteKind === "memo";
 		const isCommandReference = this.isCommandReference(originalContent);
 		const detectedGaps = (analysis.missingInformation ?? []).filter(
@@ -139,8 +116,8 @@ export class NoteEditor {
 		const commandReferenceRules = isCommandReference
 			? `
 			RÈGLE ABSOLUE — CATALOGUE DE COMMANDES :
-			- Transforme chaque descriptif placé juste avant une commande en sous-section H5 au format « ##### Description ».
-			- N'utilise plus de balises HTML <u> pour ces descriptifs et retire le deux-points final du titre.
+			- Transforme chaque descriptif placé juste avant une commande en sous-section H6 au format « ###### Description ».
+			- N'utilise plus de balises HTML pour ces descriptifs et retire le deux-points final du titre.
 				- Place ensuite chaque commande CLI isolée entre backticks simples, par exemple \`ls -la\`, puis garde les précisions courtes dessous.
 				- Réserve les triples backticks aux vrais extraits de code, fichiers de configuration, scripts, payloads ou exemples multilignes.
 			- N'utilise pas un niveau de titre plus grand : cette hiérarchie doit rester discrète et facile à parcourir.
