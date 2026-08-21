@@ -133,7 +133,7 @@ export class NoteEditor {
 				: `
 			RÈGLE ABSOLUE — NOTE DE RÉFÉRENCE :
 			- Complète uniquement les lacunes directement liées aux sections existantes.
-			- Préserve la structure, la densité et le format dominants de l'auteur.
+				- Préserve la structure, la densité et le format dominants de l'auteur.
 				- Reste synthétique : deux phrases ou trois puces au maximum par information manquante.
 			`;
 		const commandReferenceRules = isCommandReference
@@ -141,7 +141,8 @@ export class NoteEditor {
 			RÈGLE ABSOLUE — CATALOGUE DE COMMANDES :
 			- Transforme chaque descriptif placé juste avant une commande en sous-section H5 au format « ##### Description ».
 			- N'utilise plus de balises HTML <u> pour ces descriptifs et retire le deux-points final du titre.
-			- Place ensuite la commande dans un bloc de code, puis garde les précisions courtes sous ce bloc.
+				- Place ensuite chaque commande CLI isolée entre backticks simples, par exemple \`ls -la\`, puis garde les précisions courtes dessous.
+				- Réserve les triples backticks aux vrais extraits de code, fichiers de configuration, scripts, payloads ou exemples multilignes.
 			- N'utilise pas un niveau de titre plus grand : cette hiérarchie doit rester discrète et facile à parcourir.
 			`
 			: '';
@@ -240,6 +241,7 @@ export class NoteEditor {
 		1. Corriger les fautes et le formatage Markdown (y compris les erreurs de locutions et expressions figées, ex: "en quelques sortes" → "en quelque sorte").
 		RÈGLE ABSOLUE DE LANGUE : La langue de sortie est « ${analysis.writingStyle.language} ». Tout texte naturel ajouté ou reformulé — titres, paragraphes, puces, commentaires et libellés Mermaid — doit rester dans cette langue. Ne traduis jamais seulement une partie de la note sous l'influence de la langue de ces instructions. Les commandes, payloads, chemins et identifiants techniques doivent rester inchangés.
 		RÈGLE ABSOLUE DE HIÉRARCHIE VISUELLE : Structure la note pour qu'elle soit facile à parcourir. Un intitulé autonome qui introduit une liste de catégories ou de types doit être un vrai titre Markdown ###, jamais une simple ligne en gras. Dans la liste, garde uniquement le nom de chaque élément en gras et son explication en texte normal. Alterne titres courts, puces, blocs de code et schémas pertinents pour éviter les murs de texte, sans ajouter de décoration inutile.
+		RÈGLE ABSOLUE POUR LE CODE : Toute commande CLI isolée ou tout exemple de commande sur une seule ligne doit être écrit entre backticks simples, comme \`git status\`. Tout véritable exemple de code, script, configuration, payload ou séquence multiligne doit être placé dans un bloc fenced entre triples backticks, avec le langage après l'ouverture lorsqu'il est connu (par exemple \`\`\`javascript ou \`\`\`yaml). Ne place jamais du texte explicatif à l'intérieur d'un bloc de code.
 		2. Préserver le style de l'auteur : Ton = ${
             analysis.writingStyle.tone
         }. Le texte ajouté doit être INDISCERNABLE de l'original en termes de densité et de format — n'invente pas de titres en gras façon "listicle" si l'auteur n'en utilise pas ailleurs dans la note.
