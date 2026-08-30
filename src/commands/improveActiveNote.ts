@@ -3,6 +3,8 @@ import type NoteImproverPlugin from '../main';
 import { VaultService } from '../vault/VaultService';
 import { Pipeline } from '../core/Pipeline';
 import { GroqProvider } from '../llm/GroqProvider';
+import { selectGroqModels } from '../llm/GroqModelRouter';
+import type { LLMProvider } from '../llm/types/LLMProvider';
 import { OllamaProvider } from '../llm/OllamaProvider';
 import { ReviewModal } from '../ui/ReviewModal';
 
@@ -20,16 +22,48 @@ export async function improveActiveNote(
 	const originalContent = await vaultService.readNote(file);
 	const existingNotes = vaultService.getOtherNoteTitles(file);
 
-	const llmProvider =
-		plugin.settings.provider === 'groq'
-			? new GroqProvider(
-					plugin.settings.groqModel,
-					plugin.settings.groqApiKey
-			)
-			: new OllamaProvider(plugin.settings.ollamaModel);
+	let analyzerProvider: LLMProvider;
+	let editorProvider: LLMProvider;
+	let usesDedicatedAnalyzer = false;
 
-	const pipeline = new Pipeline(llmProvider);
-	const statusNotice = new Notice('Analyzing note…', 0);
+	if (plugin.settings.provider === 'groq') {
+		const route = selectGroqModels(
+			originalContent,
+			plugin.settings.groqModel,
+			plugin.settings.groqLongNoteAnalyzerModel,
+			plugin.settings.groqLongNoteThreshold
+		);
+		usesDedicatedAnalyzer = route.usesDedicatedAnalyzer;
+
+		editorProvider = new GroqProvider(
+			route.editorModel,
+			plugin.settings.groqApiKey
+		);
+		analyzerProvider = usesDedicatedAnalyzer
+			? new GroqProvider(
+					route.analyzerModel,
+					plugin.settings.groqApiKey,
+					{
+						reasoningEffort: 'none',
+						jsonObjectMode: true,
+					}
+				)
+			: editorProvider;
+	} else {
+		const ollamaProvider = new OllamaProvider(
+			plugin.settings.ollamaModel
+		);
+		analyzerProvider = ollamaProvider;
+		editorProvider = ollamaProvider;
+	}
+
+	const pipeline = new Pipeline(analyzerProvider, editorProvider);
+	const statusNotice = new Notice(
+		usesDedicatedAnalyzer
+			? 'Analyzing long note with dedicated model…'
+			: 'Analyzing note…',
+		0
+	);
 
 	try {
 		const proposal = await pipeline.run(originalContent, existingNotes);

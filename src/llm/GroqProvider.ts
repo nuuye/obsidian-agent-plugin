@@ -11,8 +11,19 @@ interface GroqChatCompletionResponse {
 	}>;
 }
 
+type GroqReasoningEffort = 'none' | 'default' | 'low' | 'medium' | 'high';
+
+interface GroqProviderOptions {
+	reasoningEffort?: GroqReasoningEffort;
+	jsonObjectMode?: boolean;
+}
+
 export class GroqProvider implements LLMProvider {
-	constructor(private modelName: string, private apiKey: string) {}
+	constructor(
+		private modelName: string,
+		private apiKey: string,
+		private providerOptions: GroqProviderOptions = {}
+	) {}
 
 	async generate(prompt: string, options?: GenerateOptions): Promise<string> {
 		let finalPrompt = prompt;
@@ -26,6 +37,21 @@ export class GroqProvider implements LLMProvider {
 		}
 
 		try {
+			const requestBody: Record<string, unknown> = {
+				model: this.modelName,
+				messages: [{ role: 'user', content: finalPrompt }],
+				stream: false,
+			};
+
+			if (this.providerOptions.reasoningEffort) {
+				requestBody.reasoning_effort =
+					this.providerOptions.reasoningEffort;
+			}
+
+			if (this.providerOptions.jsonObjectMode) {
+				requestBody.response_format = { type: 'json_object' };
+			}
+
 			// requestUrl ne supporte pas le streaming SSE (contrairement à
 			// fetch + ReadableStream) — on fait donc un appel classique. Si un
 			// callback onToken est fourni (compat avec NoteEditor/NoteAnalyzer
@@ -38,11 +64,7 @@ export class GroqProvider implements LLMProvider {
 					'Content-Type': 'application/json',
 					Authorization: `Bearer ${this.apiKey}`,
 				},
-				body: JSON.stringify({
-					model: this.modelName,
-					messages: [{ role: 'user', content: finalPrompt }],
-					stream: false,
-				}),
+				body: JSON.stringify(requestBody),
 			});
 
 			const data = response.json as GroqChatCompletionResponse;
