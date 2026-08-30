@@ -37,7 +37,13 @@ export async function improveActiveNote(
 
 		editorProvider = new GroqProvider(
 			route.editorModel,
-			plugin.settings.groqApiKey
+			plugin.settings.groqApiKey,
+			{
+				maxCompletionTokens: 3800,
+				...(route.editorModel.startsWith('openai/gpt-oss-')
+					? { reasoningEffort: 'low' as const }
+					: {}),
+			}
 		);
 		analyzerProvider = usesDedicatedAnalyzer
 			? new GroqProvider(

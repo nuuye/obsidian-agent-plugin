@@ -8,7 +8,11 @@ interface GroqChatCompletionResponse {
 		message?: {
 			content?: string;
 		};
+		finish_reason?: string;
 	}>;
+	usage?: {
+		completion_tokens?: number;
+	};
 }
 
 type GroqReasoningEffort = 'none' | 'default' | 'low' | 'medium' | 'high';
@@ -16,6 +20,14 @@ type GroqReasoningEffort = 'none' | 'default' | 'low' | 'medium' | 'high';
 interface GroqProviderOptions {
 	reasoningEffort?: GroqReasoningEffort;
 	jsonObjectMode?: boolean;
+	maxCompletionTokens?: number;
+}
+
+class GroqIncompleteResponseError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = 'GroqIncompleteResponseError';
+	}
 }
 
 export class GroqProvider implements LLMProvider {
@@ -52,6 +64,11 @@ export class GroqProvider implements LLMProvider {
 				requestBody.response_format = { type: 'json_object' };
 			}
 
+			if (this.providerOptions.maxCompletionTokens) {
+				requestBody.max_completion_tokens =
+					this.providerOptions.maxCompletionTokens;
+			}
+
 			// requestUrl ne supporte pas le streaming SSE (contrairement à
 			// fetch + ReadableStream) — on fait donc un appel classique. Si un
 			// callback onToken est fourni (compat avec NoteEditor/NoteAnalyzer
@@ -68,12 +85,33 @@ export class GroqProvider implements LLMProvider {
 			});
 
 			const data = response.json as GroqChatCompletionResponse;
-			const fullText: string = data.choices?.[0]?.message?.content ?? '';
+			const choice = data.choices?.[0];
+
+			if (choice?.finish_reason === 'length') {
+				const tokenCount = data.usage?.completion_tokens;
+				const tokenDetails = tokenCount
+					? ` after ${tokenCount} output tokens`
+					: '';
+				throw new GroqIncompleteResponseError(
+					`Groq stopped ${this.modelName}${tokenDetails} before the note was complete. The original note was not modified.`
+				);
+			}
+
+			const fullText: string = choice?.message?.content ?? '';
+			if (!fullText.trim()) {
+				throw new GroqIncompleteResponseError(
+					`Groq returned an empty response for ${this.modelName}. The original note was not modified.`
+				);
+			}
 
 			options?.onToken?.(fullText);
 
 			return fullText;
 		} catch (error) {
+			if (error instanceof GroqIncompleteResponseError) {
+				throw error;
+			}
+
 			console.error('[ERROR] Error while reaching Groq API:', error);
 			throw new Error('Unable to communicate with Groq.');
 		}
