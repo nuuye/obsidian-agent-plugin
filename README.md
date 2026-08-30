@@ -1,92 +1,111 @@
-# Obsidian Sample Plugin
+# Note Improver
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+Note Improver is an Obsidian plugin that analyzes the active Markdown note with an LLM, proposes a clearer and better-structured version, and lets you review and approve the changes before modifying the note.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+The plugin supports **Groq** (cloud) and **Ollama** (local).
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
+## Features
 
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and outputs a Notice on click.
-- Registers a global interval which logs 'setInterval' to the console.
+- Corrects spelling, wording, and Markdown formatting.
+- Adapts improvements to the type of note: memo, concept note, or reference note.
+- Clarifies uncertain passages and fills in essential missing information.
+- Preserves the note’s primary heading and dominant writing style.
+- Adds YAML aliases based on detected topics when the note does not already have frontmatter.
+- Turns the first occurrence of known concepts into Obsidian internal links (`[[Note name]]`).
+- Can generate a Mermaid diagram when it provides meaningful value.
+- Displays every proposed change with a **Before / After** preview.
+- Lets you accept all changes, accept only a selection, or reject everything.
+- Creates a backup of the original note before applying changes.
 
-## First time developing plugins?
+## Requirements
 
-Quick starting guide for new plugin devs:
+- Obsidian 1.4.0 or later.
+- A [Groq API key](https://console.groq.com/keys), or a local [Ollama](https://ollama.com/) installation.
+- Obsidian on desktop: the plugin is currently declared as desktop-only.
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `src/main.ts` to `main.js`.
-- Make changes to `src/main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+## Manual installation
 
-## Releasing new releases
+To install Note Improver without using the community plugin catalog:
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+1. Download `main.js`, `manifest.json`, and `styles.css` from the desired release.
+2. Create the following folder in your vault:
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+   ```text
+   <YourVault>/.obsidian/plugins/obsidian-note-improver/
+   ```
 
-## Adding your plugin to the community plugin list
+3. Copy the three files into that folder.
+4. Reload Obsidian.
+5. Open **Settings → Community plugins**, then enable **Note Improver**.
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+## Configuration
 
-## How to use
+Open **Settings → Note Improver**, then choose a provider.
 
-- Clone this repo.
-- Make sure your NodeJS is at least v18 (`node --version`).
-- `npm i` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+### Groq
 
-## Manually installing the plugin
+1. Select **Groq (cloud)**.
+2. Enter your **Groq API key**.
+3. Enter the model to use. The default is `openai/gpt-oss-120b`.
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+The API key is stored by Obsidian in the plugin’s local data. Do not share your vault’s configuration files.
 
-## Improve code quality with eslint
+### Ollama
 
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code.
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
+1. Install and start Ollama on your computer.
+2. Download a model, for example:
 
-## Funding URL
+   ```bash
+   ollama pull qwen3.5:9b-q6_K
+   ```
 
-You can include funding URLs where people who use your plugin can financially support it.
+3. Select **Ollama (local)** in the plugin settings.
+4. Enter the exact model name under **Ollama model**.
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+The plugin connects to Ollama at `http://127.0.0.1:11434`.
 
-```json
-{
-	"fundingUrl": "https://buymeacoffee.com"
-}
+## Usage
+
+1. Open a Markdown note.
+2. Select the magic wand icon in the ribbon, or run **Improve note with AI** from the command palette.
+3. Wait for the analysis to finish.
+4. Expand **Show change** to compare each proposal.
+5. Enable or disable the changes you want.
+6. Select:
+
+   - **Accept all** to apply every change;
+   - **Accept selection** to apply only the enabled changes;
+   - **Reject all** to close the window without modifying the note.
+
+When changes are applied, the original version is saved in the `backups/` folder at the root of the vault. Backups are timestamped and are not deleted automatically.
+
+## Privacy
+
+Behavior depends on the selected provider:
+
+- **Groq**: the complete contents of the active note are sent to the Groq API for analysis and rewriting. Review Groq’s terms and privacy policy before using it.
+- **Ollama**: requests are sent to the local server configured at `127.0.0.1`. In this mode, the plugin does not contact a remote LLM service on its own.
+
+The titles of other notes in the vault are used only to create internal links locally. The plugin does not include telemetry.
+
+LLM-generated output can contain errors, so review all proposed changes before accepting them.
+
+## Development
+
+The project uses TypeScript, npm, and esbuild. Node.js 18 or later is recommended.
+
+```bash
+npm install
+npm run dev
 ```
 
-If you have multiple URLs, you can also do:
+Available commands:
 
-```json
-{
-	"fundingUrl": {
-		"Buy Me a Coffee": "https://buymeacoffee.com",
-		"GitHub Sponsor": "https://github.com/sponsors",
-		"Patreon": "https://www.patreon.com/"
-	}
-}
+```bash
+npm run dev     # compile in watch mode
+npm run build   # run TypeScript checks and create a production build
+npm run lint    # run ESLint
 ```
 
-## API Documentation
+To test the plugin in Obsidian, copy `main.js`, `manifest.json`, and `styles.css` to the root of the plugin folder in your vault, then reload Obsidian.
 
-See https://docs.obsidian.md

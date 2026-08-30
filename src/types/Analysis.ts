@@ -8,6 +8,7 @@ export interface MissingInformation {
 export interface Analysis {
     summary: string;
     topics: string[];
+	noteKind: "memo" | "concept" | "reference";
     writingStyle: {
         language: string;
         tone: string;

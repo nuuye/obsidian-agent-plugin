@@ -2,19 +2,16 @@ import { LLMProvider } from '../llm/types/LLMProvider.js';
 import { Proposal } from '../types/Proposal.js';
 import { NoteAnalyzer } from '../analyzer/NoteAnalyzer.js';
 import { NoteEditor } from '../editor/NoteEditor.js';
-import { ChangeReviewer } from '../reviewer/ChangeReviewer.js';
 import { ChangePlanner } from '../planner/ChangePlanner.js';
 
 export class Pipeline {
 	private analyzer: NoteAnalyzer;
 	private editor: NoteEditor;
-	private reviewer: ChangeReviewer;
 	private planner: ChangePlanner;
 
 	constructor(private llmProvider: LLMProvider) {
 		this.analyzer = new NoteAnalyzer(this.llmProvider);
 		this.editor = new NoteEditor(this.llmProvider);
-		this.reviewer = new ChangeReviewer(this.llmProvider);
 		this.planner = new ChangePlanner();
 	}
 
@@ -40,15 +37,6 @@ export class Pipeline {
 			existingNotes
 		);
 
-		const changesJson = await this.reviewer.review(
-			originalContent,
-			modifiedContent
-		);
-
-		return this.planner.createProposal(
-			originalContent,
-			modifiedContent,
-			changesJson
-		);
+		return this.planner.createProposal(originalContent, modifiedContent);
 	}
 }

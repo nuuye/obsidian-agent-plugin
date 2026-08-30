@@ -4,7 +4,7 @@ import {
 	DEFAULT_SETTINGS,
 	NoteImproverSettingTab,
 } from './settings';
-import { improveActiveNote } from './commands/improveActiveNote';
+import { NoteImprovementRunner } from './commands/NoteImprovementRunner';
 
 export default class NoteImproverPlugin extends Plugin {
 	// "!" = definite assignment assertion : settings est toujours initialisé
@@ -15,15 +15,21 @@ export default class NoteImproverPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		this.addRibbonIcon('wand-2', 'Improve note with AI', () => {
-			void improveActiveNote(this);
-		});
+		const improvementRunner = new NoteImprovementRunner(this);
+		const ribbonIcon = this.addRibbonIcon(
+			'wand-2',
+			'Improve note with AI',
+			() => {
+				void improvementRunner.run();
+			}
+		);
+		improvementRunner.attachRibbonIcon(ribbonIcon);
 
 		this.addCommand({
 			id: 'improve-active-note',
-			name: 'Improve current note with AI',
+			name: 'Improve note with AI',
 			callback: () => {
-				void improveActiveNote(this);
+				void improvementRunner.run();
 			},
 		});
 

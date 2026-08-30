@@ -1,8 +1,75 @@
-/*
+.note-improver-change-preview {
+	margin-top: var(--size-4-2);
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.note-improver-change-preview summary {
+	cursor: pointer;
+	color: var(--text-muted);
+}
 
-If your plugin does not need CSS, delete this file.
+.note-improver-change-label {
+	margin-top: var(--size-4-2);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+}
 
-*/
+.note-improver-change-preview pre {
+	max-height: 12rem;
+	margin: var(--size-4-1) 0 0;
+	padding: var(--size-4-2);
+	overflow: auto;
+	white-space: pre-wrap;
+	word-break: break-word;
+	background: var(--background-secondary);
+}
+
+.note-improver-change-before {
+	border-left: 3px solid var(--text-error);
+}
+
+.note-improver-change-after {
+	border-left: 3px solid var(--text-success);
+}
+
+.note-improver-button-row {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: var(--size-4-2);
+	margin-top: var(--size-4-4);
+}
+
+.note-improver-ribbon-loading svg {
+	animation: note-improver-spin 0.9s linear infinite;
+	transform-origin: center;
+}
+
+@keyframes note-improver-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.note-improver-ribbon-loading svg {
+		animation-duration: 1.8s;
+	}
+}
+
+/* Réduit uniquement l'espace vertical des blocs de code des notes Markdown. */
+.workspace-leaf-content[data-type='markdown'] .markdown-rendered pre:not(.mermaid) {
+	padding-top: var(--size-4-1);
+	padding-bottom: var(--size-4-1);
+}
+
+.workspace-leaf-content[data-type='markdown']
+	.markdown-source-view.mod-cm6
+	.cm-line.HyperMD-codeblock-begin {
+	padding-top: var(--size-4-1);
+}
+
+.workspace-leaf-content[data-type='markdown']
+	.markdown-source-view.mod-cm6
+	.cm-line.HyperMD-codeblock-end {
+	padding-bottom: var(--size-4-1);
+}

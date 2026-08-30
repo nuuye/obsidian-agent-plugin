@@ -1,4 +1,4 @@
-import { App, Modal, Setting } from 'obsidian';
+import { App, Modal, Notice, Setting } from 'obsidian';
 import { Proposal } from '../types/Proposal';
 import { ProposedChange } from '../types/Changes';
 import { MarkdownEditor } from '../markdown/MarkdownEditor';
@@ -8,6 +8,8 @@ export class ReviewModal extends Modal {
 	private onConfirm: (finalContent: string) => Promise<void>;
 	private selectedIds: Set<string>;
 	private markdownEditor = new MarkdownEditor();
+	private isConfirming = false;
+	private actionButtons: HTMLButtonElement[] = [];
 
 	constructor(
 		app: App,
@@ -26,7 +28,7 @@ export class ReviewModal extends Modal {
 		contentEl.createEl('h2', { text: 'Proposed changes' });
 
 		this.proposal.changes.forEach((change: ProposedChange) => {
-			new Setting(contentEl)
+			const setting = new Setting(contentEl)
 				.setName(change.type)
 				.setDesc(change.description)
 				.addToggle((toggle) =>
@@ -38,6 +40,27 @@ export class ReviewModal extends Modal {
 						}
 					})
 				);
+
+			const preview = setting.descEl.createEl('details', {
+				cls: 'note-improver-change-preview',
+			});
+			preview.createEl('summary', { text: 'Show change' });
+			preview.createDiv({
+				cls: 'note-improver-change-label',
+				text: 'Before',
+			});
+			preview.createEl('pre', {
+				cls: 'note-improver-change-before',
+				text: change.before || '(nothing)',
+			});
+			preview.createDiv({
+				cls: 'note-improver-change-label',
+				text: 'After',
+			});
+			preview.createEl('pre', {
+				cls: 'note-improver-change-after',
+				text: change.after || '(nothing)',
+			});
 		});
 
 		const buttonRow = contentEl.createDiv({
@@ -52,7 +75,7 @@ export class ReviewModal extends Modal {
 		};
 
 		const applySelectionBtn = buttonRow.createEl('button', {
-			text: 'Apply selection',
+			text: 'Accept selection',
 		});
 		applySelectionBtn.onclick = () => {
 			const selected = this.proposal.changes.filter((c) =>
@@ -65,15 +88,52 @@ export class ReviewModal extends Modal {
 			text: 'Reject all',
 		});
 		rejectAllBtn.onclick = () => this.close();
+
+		this.actionButtons = [
+			acceptAllBtn,
+			applySelectionBtn,
+			rejectAllBtn,
+		];
 	}
 
 	private async confirmWith(acceptedChanges: ProposedChange[]) {
-		const finalContent = this.markdownEditor.applyChanges(
-			this.proposal,
-			acceptedChanges
-		);
-		await this.onConfirm(finalContent);
-		this.close();
+		if (this.isConfirming) {
+			return;
+		}
+
+		this.isConfirming = true;
+		this.actionButtons.forEach((button) => {
+			button.disabled = true;
+		});
+
+		try {
+			const { content, skippedChanges } = this.markdownEditor.applyChanges(
+				this.proposal,
+				acceptedChanges
+			);
+
+			if (skippedChanges.length > 0) {
+				new Notice(
+					`${skippedChanges.length} change(s) could not be located precisely and were skipped: ` +
+						skippedChanges.map((c) => c.description).join(', ')
+				);
+			}
+
+			await this.onConfirm(content);
+			this.close();
+		} catch (error) {
+			console.error('[ERROR] Unable to apply the selected changes:', error);
+			new Notice(
+				`Unable to update the note: ${
+					error instanceof Error ? error.message : String(error)
+				}`
+			);
+		} finally {
+			this.isConfirming = false;
+			this.actionButtons.forEach((button) => {
+				button.disabled = false;
+			});
+		}
 	}
 
 	onClose() {
