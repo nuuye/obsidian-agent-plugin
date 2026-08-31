@@ -18,7 +18,7 @@ export const mermaidSyntaxExamples: Record<string, MermaidConfig> = {
         }
         }}%%
         graph TD
-            A["Concept principal"] -->|Action/Lien| B["Catégorie"]
+            A["Concept principal"] -->|"Action (détail)"| B["Catégorie"]
             B -->|Mène à| C{"Condition"}
             C -->|Oui| D["Concept D"]
             C -->|Non| E["Concept E"]
