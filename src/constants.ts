@@ -5,7 +5,7 @@ interface MermaidConfig {
 
 export const mermaidSyntaxExamples: Record<string, MermaidConfig> = {
 	'graph TD': {
-		rule: 'Chaque flèche DOIT avoir un label explicatif explicite (Syntaxe : A -->|label| B). RÈGLE CRITIQUE : si le texte à l\'intérieur d\'un nœud (entre [ ] ou { }) contient des parenthèses, virgules ou deux-points, ENTOURE-LE de guillemets doubles (ex: A["Concept (détail)"] et NON A[Concept (détail)]). Utilise un style sobre et lisible en adéquation avec un thème sombre. Utilise des couleurs vives.',
+		rule: 'Chaque flèche DOIT avoir un label explicatif explicite (Syntaxe : A -->|label| B). RÈGLE CRITIQUE : si le texte à l\'intérieur d\'un nœud (entre [ ] ou { }) contient des parenthèses, virgules ou deux-points, ENTOURE-LE de guillemets doubles (ex: A["Concept (détail)"] et NON A[Concept (détail)]). Dans une instruction class, sépare plusieurs identifiants par des virgules SANS espace (ex: class A,B,C root). Utilise un style sobre et lisible en adéquation avec un thème sombre. Utilise des couleurs vives.',
 
 		example: `%%{init: {
         "theme": "base",

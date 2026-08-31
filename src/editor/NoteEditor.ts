@@ -7,6 +7,7 @@ import { normalizeCommandHeadings } from "../editor/utils/normalizeCommandHeadin
 import { preservePrimaryHeading } from "../editor/utils/preservePrimaryHeading.js";
 import { normalizeVisualHierarchy } from "../editor/utils/normalizeVisualHierarchy.js";
 import { validateEditedContent } from "../editor/utils/validateEditedContent.js";
+import { normalizeMermaidSyntax } from "../editor/utils/normalizeMermaidSyntax.js";
 
 export class NoteEditor {
     constructor(private llm: LLMProvider) {}
@@ -278,6 +279,7 @@ export class NoteEditor {
 			? normalizeCommandHeadings(withOriginalHeading)
 			: withOriginalHeading;
 		const withVisualHierarchy = normalizeVisualHierarchy(withCommandHeadings);
-		return normalizeMarkdownSpacing(withVisualHierarchy);
+		const withValidMermaid = normalizeMermaidSyntax(withVisualHierarchy);
+		return normalizeMarkdownSpacing(withValidMermaid);
     }
 }
