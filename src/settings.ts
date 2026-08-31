@@ -5,8 +5,8 @@ export interface NoteImproverSettings {
     provider: "groq" | "ollama";
     groqApiKey: string;
     groqModel: string;
+    // Stored key kept for compatibility with settings saved by earlier builds.
     groqLongNoteAnalyzerModel: string;
-    groqLongNoteThreshold: number;
     ollamaModel: string;
 }
 
@@ -15,7 +15,6 @@ export const DEFAULT_SETTINGS: NoteImproverSettings = {
     groqApiKey: "",
     groqModel: "openai/gpt-oss-120b",
     groqLongNoteAnalyzerModel: "qwen/qwen3.6-27b",
-    groqLongNoteThreshold: 1000,
     ollamaModel: "",
 };
 
@@ -66,8 +65,8 @@ export class NoteImproverSettingTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
-            .setName("Long-note analyzer model")
-            .setDesc("Used for the JSON analysis when a note reaches the long-note threshold.")
+            .setName("Groq analyzer model")
+            .setDesc("Used to build the JSON analysis for every note.")
             .addText((text) =>
                 text
                     .setValue(this.plugin.settings.groqLongNoteAnalyzerModel)
@@ -76,25 +75,6 @@ export class NoteImproverSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     })
             );
-
-        new Setting(containerEl)
-            .setName("Long-note threshold")
-            .setDesc("Estimated note tokens before the dedicated analyzer model is used. Three characters count as approximately one token.")
-            .addText((text) => {
-                text.inputEl.type = "number";
-                text.inputEl.min = "1";
-
-                return text
-                    .setPlaceholder("1000")
-                    .setValue(String(this.plugin.settings.groqLongNoteThreshold))
-                    .onChange(async (value) => {
-                        const threshold = Number.parseInt(value, 10);
-                        if (Number.isFinite(threshold) && threshold > 0) {
-                            this.plugin.settings.groqLongNoteThreshold = threshold;
-                            await this.plugin.saveSettings();
-                        }
-                    });
-            });
 
         new Setting(containerEl)
             .setName("Ollama model")

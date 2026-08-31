@@ -3,7 +3,6 @@ import type NoteImproverPlugin from '../main';
 import { VaultService } from '../vault/VaultService';
 import { Pipeline } from '../core/Pipeline';
 import { GroqProvider } from '../llm/GroqProvider';
-import { selectGroqModels } from '../llm/GroqModelRouter';
 import type { LLMProvider } from '../llm/types/LLMProvider';
 import { OllamaProvider } from '../llm/OllamaProvider';
 import { ReviewModal } from '../ui/ReviewModal';
@@ -24,37 +23,33 @@ export async function improveActiveNote(
 
 	let analyzerProvider: LLMProvider;
 	let editorProvider: LLMProvider;
-	let usesDedicatedAnalyzer = false;
 
 	if (plugin.settings.provider === 'groq') {
-		const route = selectGroqModels(
-			originalContent,
-			plugin.settings.groqModel,
-			plugin.settings.groqLongNoteAnalyzerModel,
-			plugin.settings.groqLongNoteThreshold
-		);
-		usesDedicatedAnalyzer = route.usesDedicatedAnalyzer;
+		const analyzerModel =
+			plugin.settings.groqLongNoteAnalyzerModel.trim() ||
+			'qwen/qwen3.6-27b';
 
 		editorProvider = new GroqProvider(
-			route.editorModel,
+			plugin.settings.groqModel,
 			plugin.settings.groqApiKey,
 			{
 				maxCompletionTokens: 3800,
-				...(route.editorModel.startsWith('openai/gpt-oss-')
+				...(plugin.settings.groqModel.startsWith('openai/gpt-oss-')
 					? { reasoningEffort: 'low' as const }
 					: {}),
 			}
 		);
-		analyzerProvider = usesDedicatedAnalyzer
-			? new GroqProvider(
-					route.analyzerModel,
-					plugin.settings.groqApiKey,
-					{
-						reasoningEffort: 'none',
-						jsonObjectMode: true,
-					}
-				)
-			: editorProvider;
+		analyzerProvider = new GroqProvider(
+			analyzerModel,
+			plugin.settings.groqApiKey,
+			{
+				maxCompletionTokens: 1200,
+				jsonObjectMode: true,
+				...(analyzerModel.startsWith('qwen/qwen3.')
+					? { reasoningEffort: 'none' as const }
+					: {}),
+			}
+		);
 	} else {
 		const ollamaProvider = new OllamaProvider(
 			plugin.settings.ollamaModel
@@ -64,12 +59,7 @@ export async function improveActiveNote(
 	}
 
 	const pipeline = new Pipeline(analyzerProvider, editorProvider);
-	const statusNotice = new Notice(
-		usesDedicatedAnalyzer
-			? 'Analyzing long note with dedicated model…'
-			: 'Analyzing note…',
-		0
-	);
+	const statusNotice = new Notice('Analyzing note…', 0);
 
 	try {
 		const proposal = await pipeline.run(originalContent, existingNotes);
