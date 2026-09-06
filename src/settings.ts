@@ -5,6 +5,8 @@ export interface NoteImproverSettings {
     provider: "groq" | "ollama";
     groqApiKey: string;
     groqModel: string;
+    // Stored key kept for compatibility with settings saved by earlier builds.
+    groqLongNoteAnalyzerModel: string;
     ollamaModel: string;
 }
 
@@ -12,6 +14,7 @@ export const DEFAULT_SETTINGS: NoteImproverSettings = {
     provider: "groq",
     groqApiKey: "",
     groqModel: "openai/gpt-oss-120b",
+    groqLongNoteAnalyzerModel: "qwen/qwen3.8-27b",
     ollamaModel: "",
 };
 
@@ -52,19 +55,34 @@ export class NoteImproverSettingTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
-            .setName("Groq model")
+            .setName("Groq editor model")
+            .setDesc("Used to generate the improved Markdown note.")
             .addText((text) =>
-                text.setValue(this.plugin.settings.groqModel).onChange(async (value) => {
+                text
+                    .setPlaceholder("e.g. openai/gpt-oss-120b")
+                    .setValue(this.plugin.settings.groqModel).onChange(async (value) => {
                     this.plugin.settings.groqModel = value;
                     await this.plugin.saveSettings();
                 })
             );
 
         new Setting(containerEl)
+            .setName("Groq analyzer model")
+            .setDesc("Used to build the JSON analysis for every note.")
+            .addText((text) =>
+                text
+                    .setPlaceholder("e.g. qwen/qwen3.8-27b")
+                    .setValue(this.plugin.settings.groqLongNoteAnalyzerModel)
+                    .onChange(async (value) => {
+                        this.plugin.settings.groqLongNoteAnalyzerModel = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        new Setting(containerEl)
             .setName("Ollama model")
             .addText((text) =>
                 text
-                    .setPlaceholder("e.g. qwen3.5:9b-q6_K")
                     .setValue(this.plugin.settings.ollamaModel)
                     .onChange(async (value) => {
                         this.plugin.settings.ollamaModel = value;

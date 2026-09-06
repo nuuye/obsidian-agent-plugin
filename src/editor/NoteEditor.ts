@@ -6,6 +6,8 @@ import { normalizeMarkdownSpacing } from "../editor/utils/normalizeMarkdownSpaci
 import { normalizeCommandHeadings } from "../editor/utils/normalizeCommandHeadings.js";
 import { preservePrimaryHeading } from "../editor/utils/preservePrimaryHeading.js";
 import { normalizeVisualHierarchy } from "../editor/utils/normalizeVisualHierarchy.js";
+import { validateEditedContent } from "../editor/utils/validateEditedContent.js";
+import { normalizeMermaidSyntax } from "../editor/utils/normalizeMermaidSyntax.js";
 
 export class NoteEditor {
     constructor(private llm: LLMProvider) {}
@@ -243,6 +245,7 @@ export class NoteEditor {
 
         const modifiedContent = await this.llm.generate(prompt, { onToken });
 		const cleaned = this.cleanLLMOutput(modifiedContent);
+		validateEditedContent(originalContent, cleaned);
 		const withAliases = this.addAliases(cleaned, analysis.topics);
 		const withLinks = linkKnownConcepts(withAliases, existingNotes);
 		const withOriginalHeading = preservePrimaryHeading(
@@ -253,6 +256,7 @@ export class NoteEditor {
 			? normalizeCommandHeadings(withOriginalHeading)
 			: withOriginalHeading;
 		const withVisualHierarchy = normalizeVisualHierarchy(withCommandHeadings);
-		return normalizeMarkdownSpacing(withVisualHierarchy);
+		const withValidMermaid = normalizeMermaidSyntax(withVisualHierarchy);
+		return normalizeMarkdownSpacing(withValidMermaid);
     }
 }

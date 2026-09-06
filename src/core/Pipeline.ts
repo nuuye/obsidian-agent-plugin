@@ -9,9 +9,12 @@ export class Pipeline {
 	private editor: NoteEditor;
 	private planner: ChangePlanner;
 
-	constructor(private llmProvider: LLMProvider) {
-		this.analyzer = new NoteAnalyzer(this.llmProvider);
-		this.editor = new NoteEditor(this.llmProvider);
+	constructor(
+		analyzerProvider: LLMProvider,
+		editorProvider: LLMProvider = analyzerProvider
+	) {
+		this.analyzer = new NoteAnalyzer(analyzerProvider);
+		this.editor = new NoteEditor(editorProvider);
 		this.planner = new ChangePlanner();
 	}
 
