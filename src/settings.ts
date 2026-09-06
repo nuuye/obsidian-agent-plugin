@@ -14,7 +14,7 @@ export const DEFAULT_SETTINGS: NoteImproverSettings = {
     provider: "groq",
     groqApiKey: "",
     groqModel: "openai/gpt-oss-120b",
-    groqLongNoteAnalyzerModel: "qwen/qwen3.6-27b",
+    groqLongNoteAnalyzerModel: "qwen/qwen3.8-27b",
     ollamaModel: "",
 };
 
@@ -58,7 +58,9 @@ export class NoteImproverSettingTab extends PluginSettingTab {
             .setName("Groq editor model")
             .setDesc("Used to generate the improved Markdown note.")
             .addText((text) =>
-                text.setValue(this.plugin.settings.groqModel).onChange(async (value) => {
+                text
+                    .setPlaceholder("e.g. openai/gpt-oss-120b")
+                    .setValue(this.plugin.settings.groqModel).onChange(async (value) => {
                     this.plugin.settings.groqModel = value;
                     await this.plugin.saveSettings();
                 })
@@ -69,6 +71,7 @@ export class NoteImproverSettingTab extends PluginSettingTab {
             .setDesc("Used to build the JSON analysis for every note.")
             .addText((text) =>
                 text
+                    .setPlaceholder("e.g. qwen/qwen3.8-27b")
                     .setValue(this.plugin.settings.groqLongNoteAnalyzerModel)
                     .onChange(async (value) => {
                         this.plugin.settings.groqLongNoteAnalyzerModel = value;
@@ -80,7 +83,6 @@ export class NoteImproverSettingTab extends PluginSettingTab {
             .setName("Ollama model")
             .addText((text) =>
                 text
-                    .setPlaceholder("e.g. qwen3.5:9b-q6_K")
                     .setValue(this.plugin.settings.ollamaModel)
                     .onChange(async (value) => {
                         this.plugin.settings.ollamaModel = value;
