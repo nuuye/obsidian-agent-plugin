@@ -3,17 +3,17 @@ import { ProposedChange, TextEdit } from '../types/Changes.js';
 
 export interface ApplyChangesResult {
 	content: string;
-	/** Changements qu'on n'a pas pu localiser précisément dans le texte (before introuvable). */
+	/** Changes whose expected source text did not match the original note. */
 	skippedChanges: ProposedChange[];
 }
 
 export class MarkdownEditor {
 	/**
-	 * Construit le contenu final de la note en fonction des changements acceptés.
+	 * Builds the final note from the accepted changes.
 	 *
-	 * Les offsets ont été calculés dans la note originale. On applique donc les
-	 * changements de la fin vers le début afin qu'un remplacement ne décale pas
-	 * les positions des changements qui le précèdent.
+	 * Offsets refer to the original note, so edits are applied from the end
+	 * backwards. This prevents a replacement from shifting the coordinates of
+	 * edits that occur earlier in the document.
 	 */
 	applyChanges(
 		proposal: Proposal,
@@ -23,6 +23,8 @@ export class MarkdownEditor {
 			return { content: proposal.originalContent, skippedChanges: [] };
 		}
 
+		// The generated note is authoritative when every change is accepted;
+		// rebuilding it from individual edits would add needless failure modes.
 		if (acceptedChanges.length === proposal.changes.length) {
 			return { content: proposal.modifiedContent, skippedChanges: [] };
 		}
@@ -78,6 +80,8 @@ export class MarkdownEditor {
 			edit.end >= edit.start &&
 			edit.end <= originalContent.length;
 
+		// Checking both the range and its exact contents prevents stale or
+		// malformed offsets from replacing unrelated text.
 		return (
 			hasValidRange &&
 			originalContent.slice(edit.start, edit.end) === edit.before

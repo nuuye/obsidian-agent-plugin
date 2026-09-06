@@ -1,10 +1,7 @@
 /**
- * Découpe le contenu en segments "protégés" (à ne jamais modifier) et
- * "normaux" (où la regex de linking peut s'appliquer sans risque) :
- *  - la frontmatter YAML en tête de note (---...---)
- *  - les blocs de code fencés (```..., y compris ```mermaid)
- *  - le code inline (`...`)
- *  - les wikilinks déjà existants ([[...]])
+ * Splits content into protected segments and regular text where automatic
+ * linking is safe. Protected segments include YAML frontmatter, fenced code
+ * blocks, inline code, and existing wikilinks.
  */
 function splitProtectedSegments(content: string): { text: string; protected: boolean }[] {
     const protectedPattern = /(^---\r?\n[\s\S]*?\r?\n---\r?\n)|(```[\s\S]*?```)|(`[^`\n]*`)|(\[\[[^\]]*\]\])/g;
@@ -32,16 +29,16 @@ function escapeRegExp(str: string): string {
 }
 
 export interface LinkKnownConceptsOptions {
-    /** Ne lie que la première occurrence de chaque titre dans la note (par défaut : true). */
+    /** Links only the first occurrence of each title by default. */
     onlyFirstOccurrence?: boolean;
 }
 
 /**
- * Remplace, de façon déterministe (sans appel LLM), toute mention d'un titre
- * de note existant du Vault par un wikilink Obsidian [[Titre]].
+ * Deterministically replaces mentions of existing vault note titles with
+ * Obsidian wikilinks, without involving the LLM.
  *
- * Ne touche jamais : la frontmatter, les blocs de code (dont ```mermaid),
- * le code inline, ni le texte déjà à l'intérieur d'un wikilink existant.
+ * Frontmatter, fenced code (including Mermaid), inline code, and existing
+ * wikilinks are never modified.
  */
 export function linkKnownConcepts(
     content: string,
@@ -54,9 +51,8 @@ export function linkKnownConcepts(
         return content;
     }
 
-    // Titres les plus longs d'abord : "Docker Compose" doit être capté avant
-    // "Docker" seul, sinon on obtient "[[Docker]] Compose" au lieu de
-    // "[[Docker Compose]]".
+    // Match longer titles first so "Docker Compose" wins over "Docker" and
+    // does not become the partial link "[[Docker]] Compose".
     const uniqueTitles = [...new Set(vaultTitles)];
     const sortedTitles = uniqueTitles.sort((a, b) => b.length - a.length);
     const alternation = sortedTitles.map(escapeRegExp).join("|");
@@ -65,10 +61,8 @@ export function linkKnownConcepts(
         return content;
     }
 
-    // Frontières "façon mot" : on interdit lettre/chiffre/apostrophe juste
-    // avant/après le match, pour ne pas matcher "Docker" à l'intérieur de
-    // "Dockerfile". \p{L}/\p{N} avec le flag "u" gèrent correctement les
-    // accents français, contrairement à \b qui est ASCII-only.
+    // Unicode-aware boundaries prevent a title such as "Docker" from matching
+    // inside "Dockerfile". Unlike \b, \p{L} and \p{N} handle accented text.
     const titleRegex = new RegExp(`(?<![\\p{L}\\p{N}'’])(${alternation})(?![\\p{L}\\p{N}'’])`, "gu");
 
     const alreadyLinked = new Set<string>();
@@ -90,10 +84,8 @@ export function linkKnownConcepts(
                 }
                 alreadyLinked.add(key);
 
-                // Si la casse rencontrée diffère du titre canonique (ex: "docker"
-                // en minuscule alors que la note s'appelle "Docker"), on utilise
-                // la syntaxe [[Titre réel|texte affiché]] pour pointer vers la
-                // bonne note tout en gardant le texte original inchangé.
+                // Preserve the visible casing with an alias while targeting
+                // the canonical vault title, e.g. [[Docker|docker]].
                 return matched === canonicalTitle ? `[[${matched}]]` : `[[${canonicalTitle}|${matched}]]`;
             });
         })

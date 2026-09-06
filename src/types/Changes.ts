@@ -8,9 +8,9 @@ export type ChangeType =
 	| 'new content';
 
 export interface TextEdit {
-	/** Position de début dans la note originale (offset UTF-16). */
+	/** Start position in the original note, expressed as a UTF-16 offset. */
 	start: number;
-	/** Position de fin exclusive dans la note originale (offset UTF-16). */
+	/** Exclusive end position in the original note, as a UTF-16 offset. */
 	end: number;
 	before: string;
 	after: string;
@@ -23,16 +23,16 @@ export interface ProposedChange {
 	reason?: string;
 	status: ChangeStatus;
 	/**
-	 * Opérations techniques formant une seule décision utilisateur. Une
-	 * reformulation déplacée peut nécessiter une insertion et une suppression.
+	 * Low-level edits grouped into one user-facing decision. Moving a rewritten
+	 * passage may require both an insertion and a deletion.
 	 */
 	edits: TextEdit[];
-	/** Position de début dans la note originale (offset UTF-16). */
+	/** Start position in the original note, expressed as a UTF-16 offset. */
 	start: number;
-	/** Position de fin exclusive dans la note originale (offset UTF-16). */
+	/** Exclusive end position in the original note, as a UTF-16 offset. */
 	end: number;
-	/** Extrait exact de la note originale, utilisé pour localiser le changement. */
+	/** Exact original excerpt used to locate and validate the change. */
 	before: string;
-	/** Ce que cet extrait devient une fois le changement appliqué. */
+	/** Replacement text after the change is applied. */
 	after: string;
 }

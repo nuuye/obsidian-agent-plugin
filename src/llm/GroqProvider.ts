@@ -69,11 +69,9 @@ export class GroqProvider implements LLMProvider {
 					this.providerOptions.maxCompletionTokens;
 			}
 
-			// requestUrl ne supporte pas le streaming SSE (contrairement à
-			// fetch + ReadableStream) — on fait donc un appel classique. Si un
-			// callback onToken est fourni (compat avec NoteEditor/NoteAnalyzer
-			// qui streament sur Ollama), on le déclenche une seule fois avec
-			// le texte complet plutôt que de faire semblant de streamer.
+			// requestUrl does not expose an SSE stream like fetch + ReadableStream.
+			// Preserve the shared provider contract by invoking onToken once with
+			// the complete response rather than simulating incremental chunks.
 			const response = await requestUrl({
 				url: GROQ_API_URL,
 				method: 'POST',

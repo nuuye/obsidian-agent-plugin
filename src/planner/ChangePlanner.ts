@@ -5,8 +5,8 @@ export class ChangePlanner {
 	private markdownDiff = new MarkdownDiff();
 
 	/**
-	 * Ne fait pas appel au LLM. Le diff et ses descriptions sont calculés
-	 * localement à partir des deux versions de la note.
+	 * Does not call the LLM. The diff and its user-facing descriptions are
+	 * derived locally from the original and generated note versions.
 	 */
 	createProposal(
 		originalContent: string,

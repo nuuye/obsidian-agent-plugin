@@ -14,7 +14,7 @@ export const DEFAULT_SETTINGS: NoteImproverSettings = {
     provider: "groq",
     groqApiKey: "",
     groqModel: "openai/gpt-oss-120b",
-    groqLongNoteAnalyzerModel: "qwen/qwen3.6-27b",
+    groqLongNoteAnalyzerModel: "qwen/qwen3.8-27b",
     ollamaModel: "",
 };
 

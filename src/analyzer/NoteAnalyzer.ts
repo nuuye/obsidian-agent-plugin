@@ -5,6 +5,11 @@ import { parseJsonFromLLM } from '../utils/llmJson';
 export class NoteAnalyzer {
 	constructor(private llm: LLMProvider) {}
 
+	/**
+	 * Converts free-form Markdown into the structured signals consumed by the
+	 * editor. Keeping this as a separate LLM pass lets the rewrite prompt adapt
+	 * its scope and formatting rules without parsing the note heuristically.
+	 */
 	async analyze(content: string): Promise<Analysis> {
 		const prompt = `
         Tu es un expert en gestion des connaissances (PKM) et Obsidian.
@@ -54,6 +59,8 @@ export class NoteAnalyzer {
         """
         `;
 
+		// The provider may enforce JSON mode, but cleanup still handles models
+		// that wrap valid JSON in reasoning tags, code fences, or short prose.
 		const response = await this.llm.generate(prompt);
 		return parseJsonFromLLM<Analysis>(
 			response,

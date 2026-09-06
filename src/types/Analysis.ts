@@ -1,8 +1,10 @@
 export interface MissingInformation {
     topic: string;
     reason: string;
-    origin: "gap" | "authorDoubt"; // gap=no information at all
-    quote?: string; // trigger quote
+    /** Distinguishes absent information from uncertainty expressed by the author. */
+    origin: "gap" | "authorDoubt";
+    /** Exact source passage that triggered an author-doubt finding. */
+    quote?: string;
 }
 
 export interface Analysis {

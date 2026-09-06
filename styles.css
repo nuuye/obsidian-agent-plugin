@@ -56,7 +56,7 @@
 	}
 }
 
-/* Réduit uniquement l'espace vertical des blocs de code des notes Markdown. */
+/* Reduce only the vertical padding of code blocks in Markdown notes. */
 .workspace-leaf-content[data-type='markdown'] .markdown-rendered pre:not(.mermaid) {
 	padding-top: var(--size-4-1);
 	padding-bottom: var(--size-4-1);
