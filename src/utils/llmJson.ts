@@ -32,10 +32,10 @@ export function parseJsonFromLLM<T>(response: string, errorContext: string): T {
 	const cleaned = extractJson(response);
 	try {
 		return JSON.parse(cleaned) as T;
-	} catch (e) {
+	} catch {
 		const preview = response.slice(0, 500);
 		throw new Error(
-			`${errorContext} — JSON invalide. Aperçu de la réponse brute (500 premiers caractères) :\n${preview}`
+			`${errorContext} — invalid JSON. Raw response preview (first 500 characters):\n${preview}`
 		);
 	}
 }

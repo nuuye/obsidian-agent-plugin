@@ -29,8 +29,31 @@ export class VaultService {
 			.map((f) => f.basename);
 	}
 
-	async writeNote(file: TFile, content: string): Promise<void> {
-		await this.app.vault.modify(file, content);
+	async assertNoteUnchanged(file: TFile, expectedContent: string): Promise<void> {
+		const currentContent = await this.app.vault.read(file);
+		if (currentContent !== expectedContent) {
+			throw new Error(
+				'The note changed while the proposal was open. Review the latest note and run the improvement again.'
+			);
+		}
+	}
+
+	async writeNote(
+		file: TFile,
+		content: string,
+		expectedContent: string
+	): Promise<void> {
+		// Vault.process performs the comparison and replacement atomically. The
+		// second check closes the race between the pre-backup check and this write.
+		await this.app.vault.process(file, (currentContent) => {
+			if (currentContent !== expectedContent) {
+				throw new Error(
+					'The note changed while the proposal was open. Review the latest note and run the improvement again.'
+				);
+			}
+
+			return content;
+		});
 	}
 
 	private static readonly BACKUP_FOLDER = 'backups';

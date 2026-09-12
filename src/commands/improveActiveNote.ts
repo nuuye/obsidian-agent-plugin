@@ -33,7 +33,7 @@ export async function improveActiveNote(
 
 		editorProvider = new GroqProvider(
 			plugin.settings.groqModel,
-			plugin.settings.groqApiKey,
+			plugin.getGroqApiKey(),
 			{
 				maxCompletionTokens: 3800,
 				...(plugin.settings.groqModel.startsWith('openai/gpt-oss-')
@@ -43,7 +43,7 @@ export async function improveActiveNote(
 		);
 		analyzerProvider = new GroqProvider(
 			analyzerModel,
-			plugin.settings.groqApiKey,
+			plugin.getGroqApiKey(),
 			{
 				maxCompletionTokens: 1200,
 				jsonObjectMode: true,
@@ -75,8 +75,11 @@ export async function improveActiveNote(
 		// The diff is computed locally. ReviewModal can therefore apply all
 		// changes or rebuild the note from only the user-selected edits.
 		new ReviewModal(plugin.app, proposal, async (finalContent: string) => {
+			// Refuse stale proposals before creating a backup, then compare again
+			// atomically during the write in case another edit lands in between.
+			await vaultService.assertNoteUnchanged(file, originalContent);
 			await vaultService.backupNote(file, originalContent);
-			await vaultService.writeNote(file, finalContent);
+			await vaultService.writeNote(file, finalContent, originalContent);
 			new Notice('Note updated.');
 		}).open();
 	} catch (error) {

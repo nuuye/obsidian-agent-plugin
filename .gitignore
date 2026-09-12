@@ -5,6 +5,9 @@
 *.iml
 .idea
 
+# Editor swap files
+*.swp
+
 # npm
 node_modules
 
@@ -15,7 +18,8 @@ main.js
 # Exclude sourcemaps
 *.map
 
-# obsidian
+# Obsidian stores plugin settings here at runtime. It may contain secrets in
+# older installations and must never be committed.
 data.json
 
 # Exclude macOS Finder (System Explorer) View States
