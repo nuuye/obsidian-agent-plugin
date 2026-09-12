@@ -1,4 +1,10 @@
-import { App, PluginSettingTab, SecretComponent, Setting } from 'obsidian';
+import {
+	App,
+	PluginSettingTab,
+	SecretComponent,
+	Setting,
+	type SettingDefinitionItem,
+} from 'obsidian';
 import type NoteImproverPlugin from './main';
 
 export interface NoteImproverSettings {
@@ -28,7 +34,77 @@ export class NoteImproverSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
+	/**
+	 * Obsidian 1.13+ uses these definitions for rendering and settings search.
+	 * display() remains below as the fallback for older supported versions.
+	 */
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				name: 'Provider',
+				control: {
+					type: 'dropdown',
+					key: 'provider',
+					defaultValue: 'groq',
+					options: {
+						groq: 'Groq (cloud)',
+						ollama: 'Ollama (local)',
+					},
+				},
+			},
+			{
+				name: 'Groq API key',
+				desc: 'Stored securely by Obsidian. The active note is sent to the selected cloud provider when you run the command.',
+				visible: () => this.plugin.settings.provider === 'groq',
+				render: (setting) => {
+					setting.addComponent((element) =>
+						new SecretComponent(this.app, element)
+							.setValue(this.plugin.settings.groqApiKeySecretId)
+							.onChange(async (value) => {
+								this.plugin.settings.groqApiKeySecretId = value;
+								await this.plugin.saveSettings();
+							})
+					);
+				},
+			},
+			{
+				name: 'Groq editor model',
+				desc: 'Used to generate the improved Markdown note.',
+				visible: () => this.plugin.settings.provider === 'groq',
+				control: {
+					type: 'text',
+					key: 'groqModel',
+					placeholder: 'Model ID',
+				},
+			},
+			{
+				name: 'Groq analyzer model',
+				desc: 'Used to build the JSON analysis for every note.',
+				visible: () => this.plugin.settings.provider === 'groq',
+				control: {
+					type: 'text',
+					key: 'groqLongNoteAnalyzerModel',
+					placeholder: 'Model ID',
+				},
+			},
+			{
+				name: 'Ollama model',
+				desc: 'Requests stay on this device and use the local Ollama endpoint.',
+				visible: () => this.plugin.settings.provider === 'ollama',
+				control: {
+					type: 'text',
+					key: 'ollamaModel',
+					placeholder: 'Model ID',
+				},
+			},
+		];
+	}
+
 	display(): void {
+		this.renderLegacySettings();
+	}
+
+	private renderLegacySettings(): void {
 		const { containerEl } = this;
 		containerEl.empty();
 
@@ -41,7 +117,7 @@ export class NoteImproverSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.provider = value as 'groq' | 'ollama';
 						await this.plugin.saveSettings();
-						this.display();
+						this.renderLegacySettings();
 					})
 			);
 
@@ -49,7 +125,7 @@ export class NoteImproverSettingTab extends PluginSettingTab {
 			new Setting(containerEl)
 				.setName('Groq API key')
 				.setDesc(
-					'Stored securely in Obsidian SecretStorage. The active note is sent to Groq when you run the command.'
+					'Stored securely by Obsidian. The active note is sent to the selected cloud provider when you run the command.'
 				)
 				.addComponent((element) =>
 					new SecretComponent(this.app, element)
@@ -65,7 +141,7 @@ export class NoteImproverSettingTab extends PluginSettingTab {
 				.setDesc('Used to generate the improved Markdown note.')
 				.addText((text) =>
 					text
-						.setPlaceholder('openai/gpt-oss-120b')
+						.setPlaceholder('Model ID')
 						.setValue(this.plugin.settings.groqModel)
 						.onChange(async (value) => {
 							this.plugin.settings.groqModel = value;
@@ -78,7 +154,7 @@ export class NoteImproverSettingTab extends PluginSettingTab {
 				.setDesc('Used to build the JSON analysis for every note.')
 				.addText((text) =>
 					text
-						.setPlaceholder('qwen/qwen3.8-27b')
+						.setPlaceholder('Model ID')
 						.setValue(
 							this.plugin.settings.groqLongNoteAnalyzerModel
 						)
@@ -93,9 +169,12 @@ export class NoteImproverSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Ollama model')
-			.setDesc('Requests stay on this device and use http://127.0.0.1:11434.')
+			.setDesc(
+				'Requests stay on this device through the configured local endpoint.'
+			)
 			.addText((text) =>
 				text
+					.setPlaceholder('Model ID')
 					.setValue(this.plugin.settings.ollamaModel)
 					.onChange(async (value) => {
 						this.plugin.settings.ollamaModel = value;
