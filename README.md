@@ -19,9 +19,11 @@ The plugin supports **Groq** (cloud) and **Ollama** (local).
 
 ## Requirements
 
-- Obsidian 1.4.0 or later.
+- Obsidian 1.11.4 or later.
 - A [Groq API key](https://console.groq.com/keys), or a local [Ollama](https://ollama.com/) installation.
-- Obsidian on desktop: the plugin is currently declared as desktop-only.
+
+Groq works on desktop and mobile. Ollama must be running on the same device at
+`http://127.0.0.1:11434`, so that provider is generally limited to desktop.
 
 ## Manual installation
 
@@ -31,7 +33,7 @@ To install Note Improver without using the community plugin catalog:
 2. Create the following folder in your vault:
 
    ```text
-   <YourVault>/.obsidian/plugins/obsidian-note-improver/
+   <YourVault>/.obsidian/plugins/note-improver/
    ```
 
 3. Copy the three files into that folder.
@@ -48,7 +50,8 @@ Open **Settings → Note Improver**, then choose a provider.
 2. Enter your **Groq API key**.
 3. Enter the model to use. The default is `openai/gpt-oss-120b`.
 
-The API key is stored by Obsidian in the plugin’s local data. Do not share your vault’s configuration files.
+The API key is stored in Obsidian SecretStorage. The plugin’s `data.json` keeps
+only the identifier of the selected secret, not the key itself.
 
 ### Ollama
 
@@ -90,6 +93,13 @@ The titles of other notes in the vault are used only to create internal links lo
 
 LLM-generated output can contain errors, so review all proposed changes before accepting them.
 
+## Updating from a private build
+
+The public plugin ID is `note-improver`. If you previously installed a private
+build under `obsidian-note-improver`, disable it and rename its plugin folder to
+`note-improver` before enabling this version. The first load migrates a legacy
+Groq key from plugin data into Obsidian SecretStorage.
+
 ## Development
 
 The project uses TypeScript, npm, and esbuild. Node.js 18 or later is recommended.
@@ -105,7 +115,16 @@ Available commands:
 npm run dev     # compile in watch mode
 npm run build   # run TypeScript checks and create a production build
 npm run lint    # run ESLint
+npm run check:release # validate versions, manifest metadata, and release files
 ```
 
 To test the plugin in Obsidian, copy `main.js`, `manifest.json`, and `styles.css` to the root of the plugin folder in your vault, then reload Obsidian.
 
+## Release process
+
+1. Update the version in `package.json` with `npm version patch`, `npm version minor`, or `npm version major`.
+2. Commit the updated `package.json`, `package-lock.json`, `manifest.json`, and `versions.json` files.
+3. Create and push a tag matching the version exactly, without a `v` prefix.
+4. Review and publish the draft GitHub release created by the release workflow.
+
+The release contains `main.js`, `manifest.json`, and `styles.css` as individual assets.

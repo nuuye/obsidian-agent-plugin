@@ -38,9 +38,37 @@ export default class NoteImproverPlugin extends Plugin {
 	async loadSettings() {
 		// Obsidian types loadData() as Promise<any>. Narrow it here so an
 		// implicit `any` does not propagate through the settings object.
-		const loadedData =
-			(await this.loadData()) as Partial<NoteImproverSettings> | null;
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData ?? {});
+		type StoredSettings = Partial<NoteImproverSettings> & {
+			groqApiKey?: string;
+		};
+		const loadedData = (await this.loadData()) as StoredSettings | null;
+		const { groqApiKey: legacyGroqApiKey, ...storedSettings } =
+			loadedData ?? {};
+
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, storedSettings);
+
+		// Private builds stored the Groq key directly in data.json. Move it into
+		// SecretStorage once, then persist settings again without the plaintext key.
+		if (legacyGroqApiKey?.trim()) {
+			const secretId =
+				this.settings.groqApiKeySecretId || 'note-improver-groq-api-key';
+			if (!this.app.secretStorage.getSecret(secretId)) {
+				this.app.secretStorage.setSecret(secretId, legacyGroqApiKey);
+			}
+			this.settings.groqApiKeySecretId = secretId;
+		}
+
+		if (
+			loadedData &&
+			Object.prototype.hasOwnProperty.call(loadedData, 'groqApiKey')
+		) {
+			await this.saveSettings();
+		}
+	}
+
+	getGroqApiKey(): string {
+		const secretId = this.settings.groqApiKeySecretId.trim();
+		return secretId ? this.app.secretStorage.getSecret(secretId) ?? '' : '';
 	}
 
 	async saveSettings() {
