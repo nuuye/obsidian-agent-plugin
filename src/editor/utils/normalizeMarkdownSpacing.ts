@@ -1,8 +1,7 @@
 /**
- * Normalise les lignes vides structurelles sans toucher au contenu des blocs
- * de code :
- * - aucune ligne vide entre la frontmatter YAML et le contenu ;
- * - exactement une ligne vide après chaque titre Markdown ATX.
+ * Normalizes structural blank lines without changing fenced code content:
+ * - no blank line between YAML frontmatter and the document;
+ * - exactly one blank line after each ATX Markdown heading.
  */
 export function normalizeMarkdownSpacing(content: string): string {
 	const lines = content.split(/\r?\n/);
@@ -25,6 +24,8 @@ export function normalizeMarkdownSpacing(content: string): string {
 
 		const fenceMatch = line.match(/^\s*(```|~~~)/);
 		if (fenceMatch?.[1]) {
+			// Track the opening marker so headings inside code examples are left
+			// untouched, including fences that use tildes instead of backticks.
 			const marker = fenceMatch[1] as '```' | '~~~';
 			if (activeFence === null) {
 				activeFence = marker;

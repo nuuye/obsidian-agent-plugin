@@ -31,7 +31,7 @@ export class OllamaProvider implements LLMProvider {
 			finalPrompt += `\n\nINSTRUCTION CRITIQUE : Ne génère AUCUNE chaîne de pensée, aucune explication et n'utilise pas de balise <think>. Donne UNIQUEMENT la réponse finale demandée.`;
 		}
 
-		// Si on a un callback onToken, on active le stream, sinon false
+		// Streaming is useful only when a consumer can render incremental tokens.
 		const isStreaming = !!options?.onToken;
 
 		try {
@@ -48,7 +48,7 @@ export class OllamaProvider implements LLMProvider {
 			if (!response.ok)
 				throw new Error(`Erreur HTTP: ${response.status}`);
 
-			// GESTION DU STREAMING
+			// Ollama streams newline-delimited JSON objects, not an SSE envelope.
 			if (isStreaming && response.body) {
 				const reader = response.body.getReader();
 				const decoder = new TextDecoder();
@@ -59,14 +59,15 @@ export class OllamaProvider implements LLMProvider {
 					if (done) break;
 
 					const chunk = decoder.decode(value, { stream: true });
-					// Ollama renvoie du JSON ligne par ligne (NDJSON)
+					// Ollama emits NDJSON. This parser currently assumes each network
+					// chunk ends on a complete record boundary.
 					const lines = chunk.split('\n').filter(Boolean);
 
 					for (const line of lines) {
 						const parsed = JSON.parse(line) as OllamaStreamChunk;
 						if (parsed.response) {
 							fullText += parsed.response;
-							// On envoie le bout de texte à notre application en temps réel
+							// Forward each generated fragment to the UI immediately.
 							options.onToken!(parsed.response);
 						}
 					}
@@ -74,7 +75,7 @@ export class OllamaProvider implements LLMProvider {
 				return fullText;
 			}
 
-			// GESTION CLASSIQUE (sans stream)
+			// Without a callback, request one regular JSON response.
 			const data = (await response.json()) as OllamaGenerateResponse;
 			let responseText: string = data.response ?? '';
 

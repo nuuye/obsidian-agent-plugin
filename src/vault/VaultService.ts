@@ -1,9 +1,9 @@
 import { App, TFile } from 'obsidian';
 
 /**
- * Regroupe tous les accès au vault en un seul endroit. Remplace VaultReader,
- * VaultWriter et NoteIndexer de la version CLI : l'API Vault d'Obsidian gère
- * déjà la lecture/écriture/listing de fichiers, plus besoin de manipuler fs/path.
+ * Keeps all vault access behind one boundary. Obsidian's Vault API replaces
+ * the CLI version's separate reader, writer, and indexer services, so no
+ * direct filesystem access is necessary.
  */
 export class VaultService {
 	constructor(private app: App) {}
@@ -18,9 +18,9 @@ export class VaultService {
 	}
 
 	/**
-	 * Titres de toutes les autres notes du vault, en excluant nativement la
-	 * note en cours d'édition (plus besoin de la logique fragile de
-	 * comparaison de noms qu'on avait dans l'ancien NoteIndexer).
+	 * Returns every other Markdown note title while excluding the active file by
+	 * path. Path comparison avoids ambiguous basename comparisons when folders
+	 * contain notes with the same name.
 	 */
 	getOtherNoteTitles(excludeFile: TFile): string[] {
 		return this.app.vault
@@ -43,9 +43,8 @@ export class VaultService {
 			try {
 				await this.app.vault.createFolder(VaultService.BACKUP_FOLDER);
 			} catch (error) {
-				// Cas limite (rare en usage mono-utilisateur) : le dossier a pu
-				// être créé entre le check et l'appel. On ignore cette erreur
-				// précise plutôt que de faire échouer tout le backup pour ça.
+				// Another operation may create the folder between the lookup and
+				// createFolder(). Treat that race as success only if it now exists.
 				if (
 					!this.app.vault.getAbstractFileByPath(
 						VaultService.BACKUP_FOLDER
@@ -58,10 +57,9 @@ export class VaultService {
 	}
 
 	/**
-	 * Construit un nom de fichier de backup lisible : "Nom-2026-08-18_14-32-05.md".
-	 * Le chemin d'origine (pour les notes dans des sous-dossiers) est aplati
-	 * avec des "_" plutôt que de recréer l'arborescence sous backups/, pour
-	 * éviter d'avoir à créer des sous-dossiers en plus.
+	 * Builds a readable backup name such as "Note-2026-08-18_14-32-05.md".
+	 * Nested source paths are flattened with underscores instead of recreating
+	 * their directory hierarchy under backups/.
 	 */
 	private buildBackupFileName(file: TFile): string {
 		const flattenedPath = file.path
@@ -86,6 +84,8 @@ export class VaultService {
 		let candidate = `${VaultService.BACKUP_FOLDER}/${fileName}`;
 		let suffix = 2;
 
+		// Milliseconds normally make collisions unlikely, but the suffix also
+		// makes repeated or mocked timestamps safe.
 		while (this.app.vault.getAbstractFileByPath(candidate)) {
 			candidate = `${VaultService.BACKUP_FOLDER}/${stem}-${suffix}.md`;
 			suffix++;

@@ -24,14 +24,12 @@ interface DraftChange extends TextEdit {
 }
 
 /**
- * Calcule localement les changements entre deux notes.
+ * Computes changes between two notes entirely in memory.
  *
- * Le diff travaille par lignes : une ligne modifiée devient un changement
- * atomique, tandis que plusieurs lignes modifiées consécutives sont regroupées.
- * L'algorithme de Myers n'alloue pas de matrice LCS complète. Une garde limite
- * néanmoins son historique : dans le cas extrême d'une réécriture presque
- * totale, on préfère produire un changement plus grossier que saturer la
- * mémoire d'un appareil mobile.
+ * The diff works on line-sized Markdown units and groups consecutive edits.
+ * Myers' algorithm avoids allocating a full LCS matrix. Its trace is still
+ * bounded: a near-total rewrite falls back to a coarser change rather than
+ * exhausting memory, especially on mobile devices.
  */
 export class MarkdownDiff {
 	private static readonly MAX_TRACE_ENTRIES = 1_000_000;
@@ -50,6 +48,8 @@ export class MarkdownDiff {
 		let modifiedOffset = 0;
 		let pending: PendingChange | null = null;
 
+		// Consecutive insert/delete operations describe one visible replacement.
+		// Equal content acts as the boundary that flushes the pending group.
 		const flushPending = () => {
 			if (!pending) {
 				return;
@@ -79,6 +79,8 @@ export class MarkdownDiff {
 				continue;
 			}
 
+			// Keep Mermaid blocks separate from adjacent prose so users cannot
+			// accept only half of a diagram-related change.
 			const operationIsMermaid = this.isMermaidBlock(operation.value);
 			const pendingIsMermaid = pending
 				? this.isMermaidBlock(
@@ -118,6 +120,8 @@ export class MarkdownDiff {
 		modified: string,
 		drafts: DraftChange[]
 	): ProposedChange[] {
+		// A moved rewrite often appears as a deletion plus an insertion. Grouping
+		// those drafts presents it as one coherent choice in the review modal.
 		const groups = this.groupDependentDrafts(drafts);
 
 		return groups
@@ -161,6 +165,8 @@ export class MarkdownDiff {
 	}
 
 	private groupDependentDrafts(drafts: DraftChange[]): DraftChange[][] {
+		// Union-find keeps transitively related drafts in the same group without
+		// repeatedly merging arrays as new relationships are discovered.
 		const parents = drafts.map((_, index) => index);
 		const findRoot = (index: number): number => {
 			let root = index;
@@ -168,6 +174,7 @@ export class MarkdownDiff {
 				root = parents[root] ?? root;
 			}
 
+			// Path compression keeps subsequent root lookups nearly constant-time.
 			let current = index;
 			while (parents[current] !== current) {
 				const next = parents[current] ?? root;
@@ -200,6 +207,8 @@ export class MarkdownDiff {
 					continue;
 				}
 
+				// Compare both directions because a moved passage may be represented
+				// as insertion→deletion or deletion→insertion by the line diff.
 				const forwardScore = this.textSimilarity(
 					left.after,
 					right.before
@@ -248,6 +257,8 @@ export class MarkdownDiff {
 	}
 
 	private textSimilarity(left: string, right: string): number {
+		// Sørensen-Dice similarity over unique words is intentionally insensitive
+		// to Markdown formatting and small word-order changes.
 		const tokenize = (value: string): Set<string> =>
 			new Set(
 				this.withoutMarkdownFormatting(value)
@@ -282,10 +293,9 @@ export class MarkdownDiff {
 	}
 
 	/**
-	 * Conserve chaque bloc fenced comme une unité indivisible. Sans cela, les
-	 * lignes ``` identiques d'un bloc existant et d'un nouveau diagramme peuvent
-	 * être associées entre elles, ce qui permettrait à une sélection partielle de
-	 * garder une fermeture tout en supprimant l'ouverture correspondante.
+	 * Keeps each fenced block as an indivisible unit. Otherwise identical fence
+	 * lines from different blocks can be matched together, allowing a partial
+	 * selection to retain a closing fence while removing its opening fence.
 	 */
 	private splitMarkdownUnits(content: string): string[] {
 		const lines = this.splitLines(content);
@@ -330,11 +340,15 @@ export class MarkdownDiff {
 	}
 
 	private diffLines(original: string[], modified: string[]): DiffOperation[] {
+		// Myers' algorithm explores edit paths by increasing distance. For each
+		// diagonal, frontier stores the furthest original index reached so far.
 		const maximumDistance = original.length + modified.length;
 		const frontier = new Map<number, number>([[1, 0]]);
 		const trace: Array<Map<number, number>> = [];
 
 		for (let distance = 0; distance <= maximumDistance; distance++) {
+			// Trace storage grows quadratically with edit distance. Fall back before
+			// retaining enough frontier snapshots to create memory pressure.
 			if (
 				(distance + 1) * (distance + 1) >
 				MarkdownDiff.MAX_TRACE_ENTRIES
@@ -384,6 +398,8 @@ export class MarkdownDiff {
 		original: string[],
 		modified: string[]
 	): DiffOperation[] {
+		// Preserve the common prefix and suffix, then expose the entire differing
+		// middle as one replacement. This keeps the fallback safe and predictable.
 		let prefixLength = 0;
 		while (
 			prefixLength < original.length &&
@@ -425,6 +441,8 @@ export class MarkdownDiff {
 		modified: string[],
 		trace: Array<Map<number, number>>
 	): DiffOperation[] {
+		// Walk the saved frontiers backwards to reconstruct the shortest edit
+		// script. Operations are collected in reverse document order.
 		const operations: DiffOperation[] = [];
 		let x = original.length;
 		let y = modified.length;

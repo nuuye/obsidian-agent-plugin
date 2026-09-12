@@ -1,8 +1,7 @@
 /**
- * Restaure le premier titre H1 de la note originale après les transformations
- * du LLM et le linking déterministe. Le titre d'une note est son identité : le
- * modèle peut corriger son contenu, mais ne doit ni le renommer ni lui ajouter
- * un suffixe éditorial comme « aperçu ».
+ * Restores the original note's first H1 after LLM and deterministic
+ * transformations. The primary heading is treated as the note's identity and
+ * must not be renamed or decorated by the model.
  */
 export function preservePrimaryHeading(
 	originalContent: string,
@@ -27,6 +26,8 @@ export function preservePrimaryHeading(
 	}
 
 	const frontmatterEnd = findFrontmatterEnd(modifiedLines);
+	// If the model removed the H1 entirely, restore it after frontmatter so the
+	// YAML block remains the first construct in the document.
 	const insertionIndex = frontmatterEnd === null ? 0 : frontmatterEnd + 1;
 	modifiedLines.splice(insertionIndex, 0, originalHeading, '');
 	return modifiedLines.join('\n');

@@ -25,9 +25,11 @@ export async function improveActiveNote(
 	let editorProvider: LLMProvider;
 
 	if (plugin.settings.provider === 'groq') {
+		// Analysis uses a smaller JSON-only response budget, while editing needs
+		// enough room to reproduce the complete Markdown document.
 		const analyzerModel =
 			plugin.settings.groqLongNoteAnalyzerModel.trim() ||
-			'qwen/qwen3.6-27b';
+			'qwen/qwen3.8-27b';
 
 		editorProvider = new GroqProvider(
 			plugin.settings.groqModel,
@@ -70,8 +72,8 @@ export async function improveActiveNote(
 			return;
 		}
 
-		// Le diff est calculé localement et ReviewModal permet d'appliquer tout
-		// ou seulement un sous-ensemble des changements proposés.
+		// The diff is computed locally. ReviewModal can therefore apply all
+		// changes or rebuild the note from only the user-selected edits.
 		new ReviewModal(plugin.app, proposal, async (finalContent: string) => {
 			await vaultService.backupNote(file, originalContent);
 			await vaultService.writeNote(file, finalContent);

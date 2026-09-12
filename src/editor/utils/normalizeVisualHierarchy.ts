@@ -1,7 +1,7 @@
 /**
- * Convertit un faux titre en gras placé juste avant une liste en véritable
- * sous-section H3. Les noms importants à l'intérieur des puces restent en gras,
- * ce qui crée une hiérarchie visuelle nette sans surcharger la note.
+ * Converts a standalone bold label immediately before a list into a real H3
+ * subsection. Bold labels inside list items remain unchanged, producing a
+ * clearer hierarchy without restructuring ordinary prose.
  */
 export function normalizeVisualHierarchy(content: string): string {
 	const lines = content.split(/\r?\n/);
@@ -34,6 +34,8 @@ export function normalizeVisualHierarchy(content: string): string {
 				return line;
 			}
 
+			// Blank lines between the label and the list are allowed, so inspect
+			// the next non-empty line rather than only the adjacent one.
 			const nextContentLine = lines
 				.slice(index + 1)
 				.find((candidate) => candidate.trim() !== '');

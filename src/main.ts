@@ -7,9 +7,8 @@ import {
 import { NoteImprovementRunner } from './commands/NoteImprovementRunner';
 
 export default class NoteImproverPlugin extends Plugin {
-	// "!" = definite assignment assertion : settings est toujours initialisé
-	// dans onload() avant d'être utilisé ailleurs (même pattern que l'exemple
-	// du guide officiel).
+	// The definite assignment assertion is safe because onload() initializes
+	// settings before registering any feature that can read them.
 	settings!: NoteImproverSettings;
 
 	async onload() {
@@ -37,9 +36,8 @@ export default class NoteImproverPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		// loadData() retourne Promise<any> côté API Obsidian — on caste
-		// explicitement plutôt que de laisser un `any` implicite se propager
-		// dans this.settings.
+		// Obsidian types loadData() as Promise<any>. Narrow it here so an
+		// implicit `any` does not propagate through the settings object.
 		const loadedData =
 			(await this.loadData()) as Partial<NoteImproverSettings> | null;
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData ?? {});

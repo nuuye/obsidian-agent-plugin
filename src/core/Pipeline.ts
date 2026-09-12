@@ -19,11 +19,10 @@ export class Pipeline {
 	}
 
 	/**
-	 * @param originalContent Contenu Markdown de la note à améliorer (lu au
-	 *   préalable via VaultService — le Pipeline ne touche plus au disque).
-	 * @param existingNotes Titres des autres notes du vault, pour le linking
-	 *   déterministe fait dans NoteEditor (la note courante doit déjà être
-	 *   exclue de cette liste par l'appelant).
+	 * @param originalContent Markdown from the note to improve. It is read by
+	 *   VaultService beforehand, so the pipeline itself never touches disk.
+	 * @param existingNotes Titles of other vault notes used by NoteEditor's
+	 *   deterministic linker. The caller must exclude the active note.
 	 */
 	async run(
 		originalContent: string,
@@ -31,9 +30,8 @@ export class Pipeline {
 	): Promise<Proposal | null> {
 		const analysis = await this.analyzer.analyze(originalContent);
 
-		// Pas de callback onToken ici : dans le plugin, il n'y a pas de
-		// terminal où streamer le texte token par token. Le progrès se
-		// communique côté appelant via des Notice ("Analyzing…", etc.).
+		// No onToken callback is needed here: the plugin has no token-by-token
+		// output surface. The caller communicates progress through Notices.
 		const modifiedContent = await this.editor.edit(
 			originalContent,
 			analysis,

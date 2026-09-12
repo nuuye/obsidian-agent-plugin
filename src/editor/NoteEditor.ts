@@ -12,6 +12,10 @@ import { normalizeMermaidSyntax } from "../editor/utils/normalizeMermaidSyntax.j
 export class NoteEditor {
     constructor(private llm: LLMProvider) {}
 
+    /**
+     * Removes a single Markdown fence wrapped around the entire response while
+     * preserving legitimate fenced blocks inside the generated note.
+     */
     private cleanLLMOutput(content: string): string {
         let text = content.trim();
         const hasGlobalOpen = /^```(?:markdown)?\r?\n/i.test(text);
@@ -26,27 +30,21 @@ export class NoteEditor {
     }
 
     /**
-     * Ajoute un bloc frontmatter YAML avec les aliases en tête de note.
+     * Adds YAML frontmatter containing aliases at the beginning of the note.
      *
-     * IMPORTANT : on construit la frontmatter via un tableau de lignes + join("\n"),
-     * PAS via un template literal multi-lignes indenté. Un template literal JS
-     * conserve tous les espaces tels quels — l'indentation "visuelle" du code
-     * source (pour que ça suive le bloc autour) se retrouve alors DANS la
-     * chaîne de sortie, ce qui décale les "---" hors de la colonne 0 et casse
-     * la reconnaissance du frontmatter par Obsidian.
+     * The block is assembled from individual lines rather than an indented
+     * template literal. Literal indentation would move the `---` delimiters
+     * away from column zero and prevent Obsidian from recognizing frontmatter.
      *
-     * Chaque alias est aussi entouré de guillemets doubles (avec échappement
-     * des guillemets internes) : un topic contenant un ':' ou un caractère
-     * spécial YAML casserait sinon le parsing, comme on l'a déjà vu pour les
-     * diagrammes Mermaid — même classe de problème, même réflexe de défense.
+     * Aliases are quoted and embedded quotes are escaped so punctuation in a
+     * model-generated topic cannot invalidate the YAML.
      */
     private addAliases(content: string, topics: string[]): string {
         if (!topics || topics.length === 0) {
             return content;
         }
 
-        // Si la note a déjà une frontmatter (ex: agent relancé sur une note déjà éditée),
-        // on ne duplique pas un second bloc "---" par-dessus.
+        // Never prepend a second frontmatter block to a previously edited note.
         if (/^---\r?\n/.test(content)) {
             return content;
         }
@@ -61,6 +59,8 @@ export class NoteEditor {
     }
 
 	private isCommandReference(content: string): boolean {
+		// Require several legacy labels plus several commands to avoid applying
+		// command-catalog formatting to an ordinary note with one code example.
 		const underlinedLabels = (content.match(/<u>[^\n]+<\/u>/gi) ?? [])
 			.length;
 		const inlineCommands = (content.match(/`[^`\n]+`/g) ?? []).length;
@@ -72,9 +72,7 @@ export class NoteEditor {
 		);
 	}
 
-    /**
-        Improve a note based on its original content and an analysis of it.
-     */
+    /** Improves a note using the structured analysis and deterministic cleanup. */
     async edit(
         originalContent: string,
         analysis: Analysis,
@@ -87,6 +85,8 @@ export class NoteEditor {
 		const detectedGaps = (analysis.missingInformation ?? []).filter(
 			(m) => m.origin === "gap"
 		);
+		// Limit enrichment so the model improves the note without expanding its
+		// scope into an exhaustive article.
 		const gaps = isMemo ? detectedGaps.slice(0, 1) : detectedGaps.slice(0, 3);
         const doubts = (analysis.missingInformation ?? []).filter((m) => m.origin === "authorDoubt");
 		const adaptationRules = isMemo
@@ -182,6 +182,8 @@ export class NoteEditor {
             `
                 : "";
 
+		// A Mermaid diagram is allowed only when analysis gives it sufficient
+		// confidence and the compact memo format does not prohibit it.
 		const useSchema =
 			!isMemo &&
 			analysis.schema.useful &&
@@ -243,6 +245,9 @@ export class NoteEditor {
         ${originalContent}
         """`;
 
+		// Run deterministic safeguards after generation in a deliberate order:
+		// validate first, then add local metadata/links, restore identity-bearing
+		// content, normalize special formats, and finally normalize whitespace.
         const modifiedContent = await this.llm.generate(prompt, { onToken });
 		const cleaned = this.cleanLLMOutput(modifiedContent);
 		validateEditedContent(originalContent, cleaned);

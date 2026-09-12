@@ -1,7 +1,6 @@
 /**
- * Dans une fiche de référence de commandes, remplace les anciens libellés HTML
- * soulignés par des titres H5 discrets. Les blocs de code et la frontmatter ne
- * sont jamais modifiés.
+ * Replaces legacy underlined HTML labels in command reference notes with
+ * unobtrusive H5 headings. Frontmatter and fenced code are never modified.
  */
 export function normalizeCommandHeadings(content: string): string {
 	const lines = content.split(/\r?\n/);

@@ -3,8 +3,8 @@ import type NoteImproverPlugin from '../main.js';
 import { improveActiveNote } from './improveActiveNote.js';
 
 /**
- * Centralise l'exécution depuis le ruban et la palette de commandes. Cela
- * garantit un seul pipeline actif et un loader toujours restauré via finally.
+ * Coordinates runs started from the ribbon and the command palette. It keeps
+ * at most one pipeline active and always restores the ribbon state in finally.
  */
 export class NoteImprovementRunner {
 	private isRunning = false;
@@ -38,6 +38,8 @@ export class NoteImprovementRunner {
 			return;
 		}
 
+		// Keep the visual icon and accessibility metadata in sync so assistive
+		// technologies receive the same state change as sighted users.
 		setIcon(this.ribbonIcon, isLoading ? 'loader-circle' : 'wand-2');
 		this.ribbonIcon.toggleClass(
 			'note-improver-ribbon-loading',

@@ -19,7 +19,7 @@ export class ReviewModal extends Modal {
 		super(app);
 		this.proposal = proposal;
 		this.onConfirm = onConfirm;
-		// Tout est sélectionné par défaut ; l'utilisateur peut décocher.
+		// Select every proposal by default while allowing individual opt-out.
 		this.selectedIds = new Set(proposal.changes.map((c) => c.id));
 	}
 
@@ -97,6 +97,8 @@ export class ReviewModal extends Modal {
 	}
 
 	private async confirmWith(acceptedChanges: ProposedChange[]) {
+		// Disable every action for the whole async write to prevent duplicate
+		// backups or overlapping note modifications from rapid clicks.
 		if (this.isConfirming) {
 			return;
 		}
