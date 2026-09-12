@@ -1,7 +1,7 @@
 {
 	"id": "note-improver",
 	"name": "Note Improver",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"minAppVersion": "1.11.4",
 	"description": "Improve active notes with reviewed AI edits using Groq or local Ollama.",
 	"author": "Thomas M.",

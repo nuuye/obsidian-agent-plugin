@@ -48,7 +48,14 @@ Open **Settings → Note Improver**, then choose a provider.
 
 1. Select **Groq (cloud)**.
 2. Enter your **Groq API key**.
-3. Enter the model to use. The default is `openai/gpt-oss-120b`.
+3. Choose an editor model and an analyzer model. The defaults are
+   `openai/gpt-oss-120b` and `qwen/qwen3.8-27b`, respectively.
+
+When using the Groq Free plan, using different models for these two roles is
+recommended. It keeps the short structured analysis on the analyzer model and
+reserves the editor model's token quota for the complete rewrite, which can
+help stay within model-specific rate limits. Check the current limits for your
+account in the [Groq Console](https://console.groq.com/settings/limits).
 
 The API key is stored in Obsidian SecretStorage. The plugin’s `data.json` keeps
 only the identifier of the selected secret, not the key itself.
