@@ -7,6 +7,10 @@ import {
 } from 'obsidian';
 import type NoteImproverPlugin from './main';
 
+const GROQ_EDITOR_MODEL_PLACEHOLDER = 'e.g. openai/gpt-oss-120b';
+const GROQ_ANALYZER_MODEL_PLACEHOLDER = 'e.g. qwen/qwen3.8-27b';
+const OLLAMA_MODEL_PLACEHOLDER = 'e.g. qwen3.5:9b-q6_K';
+
 export interface NoteImproverSettings {
 	provider: 'groq' | 'ollama';
 	groqApiKeySecretId: string;
@@ -74,7 +78,7 @@ export class NoteImproverSettingTab extends PluginSettingTab {
 				control: {
 					type: 'text',
 					key: 'groqModel',
-					placeholder: 'Model ID',
+					placeholder: GROQ_EDITOR_MODEL_PLACEHOLDER,
 				},
 			},
 			{
@@ -84,7 +88,7 @@ export class NoteImproverSettingTab extends PluginSettingTab {
 				control: {
 					type: 'text',
 					key: 'groqLongNoteAnalyzerModel',
-					placeholder: 'Model ID',
+					placeholder: GROQ_ANALYZER_MODEL_PLACEHOLDER,
 				},
 			},
 			{
@@ -94,7 +98,7 @@ export class NoteImproverSettingTab extends PluginSettingTab {
 				control: {
 					type: 'text',
 					key: 'ollamaModel',
-					placeholder: 'Model ID',
+					placeholder: OLLAMA_MODEL_PLACEHOLDER,
 				},
 			},
 		];
@@ -141,7 +145,7 @@ export class NoteImproverSettingTab extends PluginSettingTab {
 				.setDesc('Used to generate the improved Markdown note.')
 				.addText((text) =>
 					text
-						.setPlaceholder('Model ID')
+						.setPlaceholder(GROQ_EDITOR_MODEL_PLACEHOLDER)
 						.setValue(this.plugin.settings.groqModel)
 						.onChange(async (value) => {
 							this.plugin.settings.groqModel = value;
@@ -154,7 +158,7 @@ export class NoteImproverSettingTab extends PluginSettingTab {
 				.setDesc('Used to build the JSON analysis for every note.')
 				.addText((text) =>
 					text
-						.setPlaceholder('Model ID')
+						.setPlaceholder(GROQ_ANALYZER_MODEL_PLACEHOLDER)
 						.setValue(
 							this.plugin.settings.groqLongNoteAnalyzerModel
 						)
@@ -174,7 +178,7 @@ export class NoteImproverSettingTab extends PluginSettingTab {
 			)
 			.addText((text) =>
 				text
-					.setPlaceholder('Model ID')
+					.setPlaceholder(OLLAMA_MODEL_PLACEHOLDER)
 					.setValue(this.plugin.settings.ollamaModel)
 					.onChange(async (value) => {
 						this.plugin.settings.ollamaModel = value;
