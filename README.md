@@ -93,13 +93,6 @@ The titles of other notes in the vault are used only to create internal links lo
 
 LLM-generated output can contain errors, so review all proposed changes before accepting them.
 
-## Updating from a private build
-
-The public plugin ID is `note-improver`. If you previously installed a private
-build under `obsidian-note-improver`, disable it and rename its plugin folder to
-`note-improver` before enabling this version. The first load migrates a legacy
-Groq key from plugin data into Obsidian SecretStorage.
-
 ## Development
 
 The project uses TypeScript, npm, and esbuild. Node.js 18 or later is recommended.
